@@ -8,7 +8,7 @@ class Proyecto(models.Model):
     fecha_fin = models.DateField(null=True, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     ultima_modificacion = models.DateTimeField(auto_now=True)
-    estado = models.BoleanField(default=True)
+    estado = models.BooleanField(default=True)
 
     def __str__(self):
         return self.nombre
