@@ -1,0 +1,7 @@
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Crear Proyecto</button>
+</form>
+
+<a href="{% url 'descargar_plantilla' %}" class="btn btn-primary">Descargar plantilla Gantt</a>
