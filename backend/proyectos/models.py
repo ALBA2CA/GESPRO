@@ -33,6 +33,7 @@ class ProductoAsociado(models.Model):
 
     def __str__(self):
         return self.nombre
+    
 
 class Actividad(models.Model):
     id = models.AutoField(primary_key=True)
@@ -69,4 +70,6 @@ class Actividad_Encargado(models.Model):
 
     def __str__(self):
         return f"{self.actividad.nombre} - {self.encargado.nombre}"
+    
+#AGREGAR LA CLASE ESTADOS
 
