@@ -74,7 +74,6 @@ def importar_gantt(nombre_proyecto, archivo_excel, anio_inicial=None):
     for _, row in df.iterrows():
         linea = row[('Unnamed: 0_level_0', 'Linea de trabajo')]
 
-        # Detenerse antes de "Difusión"
         if str(linea).strip().lower() == 'difusión':
             break
 
@@ -82,13 +81,11 @@ def importar_gantt(nombre_proyecto, archivo_excel, anio_inicial=None):
             ultima_linea = linea
         if not ultima_linea:
             continue
-
         # LineaTrabajo
         linea_obj, _ = LineaTrabajo.objects.get_or_create(
             proyecto=proyecto,
             nombre=ultima_linea
         )
-
         # Producto Asociado
         producto_nombre = row[('Unnamed: 5_level_0', 'Producto Asociado')]
         producto_obj = None
@@ -138,6 +135,71 @@ def importar_gantt(nombre_proyecto, archivo_excel, anio_inicial=None):
                         actividad=actividad_obj,
                         encargado=encargado_obj
                     )
+    
+    
+
+    # -------------------------
+    # Procesar sección Difusión
+    # -------------------------
+    # Localizar el inicio de Difusión (fila con "Difusión")
+    idx_difusion = df[df[('Unnamed: 0_level_0', 'Linea de trabajo')]
+                      .astype(str).str.strip().str.lower() == 'difusión'].index
+
+    if not idx_difusion.empty:
+        start_idx = idx_difusion[0] + 2  # saltamos "Difusión" y la fila de subtítulos
+        df_difusion = df.loc[start_idx:]
+
+        ultima_linea = "Difusión"
+        for _, row in df_difusion.iterrows():
+            actividad_nombre = row[('Unnamed: 1_level_0', 'Linea de trabajo')]  # col de Actividad en Difusión
+            responsables = row[('Unnamed: 3_level_0', 'Actividad')]            # col de Responsable en Difusión
+            producto_nombre = row[('Unnamed: 4_level_0', 'Responsable(s)')]    # col de Producto asociado en Difusión
+            
+            # Fechas activas
+            if pd.isna(actividad_nombre):
+                continue
+
+            # LineaTrabajo
+            linea_obj, _ = LineaTrabajo.objects.get_or_create(
+                proyecto=proyecto,
+                nombre=ultima_linea
+            )
+
+            # Producto Asociado
+            producto_obj = None
+            if pd.notna(producto_nombre):
+                producto_obj, _ = ProductoAsociado.objects.get_or_create(
+                    nombre=str(producto_nombre).strip(),
+                    extension=''
+                )
+
+            # Fechas activas
+            fechas_activas = [fechas_reales[col] for col in date_cols if str(row[col]).strip().lower() == 'x']
+            if not fechas_activas:
+                continue
+            
+            fecha_inicio_act = min(fechas_activas)
+            fecha_fin_act = max(fechas_activas)
+
+            # Crear actividad
+            actividad_obj = Actividad.objects.create(
+                linea_trabajo=linea_obj,
+                producto_asociado=producto_obj,
+                nombre=str(actividad_nombre).strip(),
+                fecha_inicio=fecha_inicio_act,
+                fecha_fin=fecha_fin_act
+            )
+
+            # Encargados
+            if pd.notna(responsables):
+                for r in str(responsables).split('y'):
+                    r = r.strip().lower()
+                    if r:
+                        encargado_obj, _ = Encargado.objects.get_or_create(nombre=r, correo_electronico='')
+                        Actividad_Encargado.objects.get_or_create(
+                            actividad=actividad_obj,
+                            encargado=encargado_obj
+                        )
 
     # Actualizar proyecto con fechas finales
     if min_fecha and max_fecha:
