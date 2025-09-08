@@ -1,3 +1,7 @@
+{% load static tailwind_tags %}
+<head>
+   {% tailwind_css %}
+</head>
 <div class="flex flex-col items-center gap-4 py-6">
     {% for proyecto in proyectos %}
     <div class="relative min-w-[250px] border border-black rounded-2xl p-4 bg-gray-800 text-white shadow">
