@@ -1,11 +1,11 @@
 from django.shortcuts import render, redirect
 from .models import *
 from .forms import UploadExcelForm
-import pandas as pd
 import os
 from django.http import FileResponse, Http404
 from django.conf import settings
-from proyectos.import_gantt import importar_gantt
+from django.contrib import messages
+from proyectos.import_gantt import importar_gantt, FormatoInvalidoError
 
 # Create your views here.
 
@@ -24,14 +24,22 @@ def importar_proyecto(request):
         if form.is_valid():
             nombre_proyecto = form.cleaned_data['nombre_proyecto']
             archivo = request.FILES['archivo']
-            
-            # Llamamos a la función que importa el Excel
-            proyecto = importar_gantt(nombre_proyecto, archivo)     
 
-            return redirect('proyectos')  # o donde quieras redirigir
+            try:
+                importar_gantt(nombre_proyecto, archivo)
+                messages.success(request, "Proyecto importado correctamente.")
+                return redirect('proyectos')
+            # Agregar solo si se usa unique=True en el modelo para el nombre del proyecto
+            # except IntegrityError:
+            #     messages.error(request, f"Ya existe un proyecto con el nombre '{nombre_proyecto}'")
+
+            except FormatoInvalidoError as e:
+                messages.error(request, f"Error de formato: {e}")
+            except Exception as e:
+                messages.error(request, f"Ocurrió un error al importar: {e}")
     else:
         form = UploadExcelForm()
-    
+
     return render(request, 'proyectos/importar_proyecto.html', {'form': form})
 
 def descargar_plantilla(request):
