@@ -73,3 +73,4 @@ class Actividad_Encargado(models.Model):
     
 #AGREGAR LA CLASE ESTADOS
 
+

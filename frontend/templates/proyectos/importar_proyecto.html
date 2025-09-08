@@ -1,7 +1,18 @@
+{% if messages %}
+  <div class="mt-3">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+      </div>
+    {% endfor %}
+  </div>
+
+{% endif %}
+
 <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Crear Proyecto</button>
+    <button type="submit" class="btn btn-success">Crear Proyecto</button>
 </form>
 
-<a href="{% url 'descargar_plantilla' %}" class="btn btn-primary">Descargar plantilla Gantt</a>
+<a href="{% url 'descargar_plantilla' %}" class="btn btn-primary mt-2">Descargar plantilla Gantt</a>
