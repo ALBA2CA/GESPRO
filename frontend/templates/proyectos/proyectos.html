@@ -10,22 +10,23 @@
             </button>
     </div>
     {% for proyecto in proyectos %}
-    <div class="relative w-9/10 h-25 rounded-2xl p-4 bg-blue-950 hover:bg-blue-900 text-white shadow">
+    <div class="relative w-9/10 rounded-2xl p-4 bg-blue-950 hover:bg-blue-900 text-white shadow">
         
-        <!-- Nombre (esquina superior izquierda) -->
-        <div class="text-2xl font-semibold text-left">
-            <a href="{% url 'proyectos' %}">
+        <a href="{% url 'proyectos' %}" class="block h-full w-full pr-10"> 
+            <div class="text-2xl font-semibold">
                 {{ proyecto.nombre }}
-            </a>
-        </div>
-
-        <!-- Dropdown con <details> en esquina superior derecha -->
+            </div>
+            <div class="mt-2 text-sm text-gray-300">
+                <p>Creado: {{ proyecto.fecha_creacion }}</p>
+                <p>Última modificación: {{ proyecto.fecha_modificacion }}</p>
+            </div>
+        </a>
         <details class="absolute top-2 right-2">
             <summary class="cursor-pointer list-none p-1 rounded hover:bg-gray-300">
                 ⋮
             </summary>
             <!-- Menú alineado a la izquierda -->
-            <div class="absolute right-full rounded-lg border border-gray-700  shadow-lg bg-red-600 z-10 hover:bg-red-700">
+            <div class="absolute right-full translate-x-6 rounded-lg border border-gray-700  shadow-lg bg-red-600 z-10 hover:bg-red-700">
                 <form action="{% url 'eliminar_proyecto' %}" method="POST"
                     onsubmit="return confirm('¿Seguro que deseas eliminar este proyecto?')">
                     {% csrf_token %}
