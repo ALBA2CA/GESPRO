@@ -1,13 +1,19 @@
-{% load static tailwind_tags %}
-<head>
-   {% tailwind_css %}
-</head>
+{% extends 'base/navbar1.html'%}
+{% block content %}
 <div class="flex flex-col items-center gap-4 py-6">
+    <div class = "flex flex-row justify-between w-full px-4">
+        <h1 class = " text-4xl">Listado:</h1>
+        <forms action="{% url 'proyectos' %}" method="POST">
+            {% csrf_token %}
+            <button type="submit" class="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded">
+                Crear Proyecto
+            </button>
+    </div>
     {% for proyecto in proyectos %}
-    <div class="relative min-w-[250px] border border-black rounded-2xl p-4 bg-gray-800 text-white shadow">
+    <div class="relative w-9/10 h-25 rounded-2xl p-4 bg-blue-950 hover:bg-blue-900 text-white shadow">
         
         <!-- Nombre (esquina superior izquierda) -->
-        <div class="text-lg font-semibold text-left">
+        <div class="text-2xl font-semibold text-left">
             <a href="{% url 'proyectos' %}">
                 {{ proyecto.nombre }}
             </a>
@@ -15,14 +21,16 @@
 
         <!-- Dropdown con <details> en esquina superior derecha -->
         <details class="absolute top-2 right-2">
-            <summary class="cursor-pointer list-none p-1 rounded hover:bg-gray-700">
+            <summary class="cursor-pointer list-none p-1 rounded hover:bg-gray-300">
                 ⋮
             </summary>
-            <div class="absolute right-0 mt-2 w-28 rounded-lg shadow-lg bg-gray-900 z-10">
-                <form action="{% url 'proyectos' %}" method="POST"
-                      onsubmit="return confirm('¿Seguro que deseas eliminar este proyecto?')">
+            <!-- Menú alineado a la izquierda -->
+            <div class="absolute right-full rounded-lg border border-gray-700  shadow-lg bg-red-600 z-10 hover:bg-red-700">
+                <form action="{% url 'eliminar_proyecto' %}" method="POST"
+                    onsubmit="return confirm('¿Seguro que deseas eliminar este proyecto?')">
                     {% csrf_token %}
-                    <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-700">
+                    <input type="hidden" name="proyecto_id" value="{{ proyecto.id }}">
+                    <button type="submit" class="block rounded-lg w-full font-bold text-left px-4 py-2 text-sm text-white">
                         Eliminar
                     </button>
                 </form>
@@ -31,3 +39,4 @@
     </div>
     {% endfor %}
 </div>
+{% endblock %}
