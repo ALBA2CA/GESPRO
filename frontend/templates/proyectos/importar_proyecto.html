@@ -25,15 +25,26 @@
 </div>
 {% endif %}
 
-<!--  Contenedor del formulario y botón de descarga -->
-<div class="flex flex-col items-center gap-4 py-6
-     relative min-w-[250px] text-white">
-  
-  <!-- Formulario de importación de proyecto -->
+{% load widget_tweaks %}
+
+<!-- Contenedor -->
+<div class="flex flex-col items-center gap-4 py-6 relative min-w-[250px] text-white">
+
+  <!-- Formulario -->
   <form method="post" enctype="multipart/form-data" 
-    class="space-y-4 p-6 border border-black rounded-xl bg-gray-800 text-white" >
+        class="space-y-4 p-6 border border-black rounded-xl bg-gray-800 text-white">
       {% csrf_token %}
-      {{ form.as_p }}
+
+      {% for field in form %}
+        <div class="space-y-1">
+          <label class="block text-white font-medium">{{ field.label }}</label>
+          {{ field|add_class:"w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900" }}
+          {% if field.errors %}
+            <p class="text-red-500 text-sm">{{ field.errors }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+
       <button type="submit" 
               class="w-full bg-green-600 hover:bg-green-700 
                      text-white font-semibold py-4 px-4 
