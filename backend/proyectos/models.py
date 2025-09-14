@@ -30,24 +30,65 @@ class ProductoAsociado(models.Model):
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     ultima_modificacion = models.DateTimeField(auto_now=True)
     estado = models.BooleanField(default=True)
+    proyecto = models.ForeignKey(Proyecto, related_name='productos_asociados', on_delete=models.CASCADE)
 
     def __str__(self):
         return self.nombre
     
 
-class Actividad(models.Model):
+class EstadoActividad(models.TextChoices):
+    PENDIENTE = 'PEN', 'Pendiente'
+    LISTO_PARA_COMENZAR = 'LPC', 'Listo para comenzar'
+    EN_PROGRESO = 'EPR', 'En progreso'
+    COMPLETADA = 'COM', 'Completada'
+    TERMINADA = 'TER', 'Terminada'
+    
+
+# Clase base para herencia multi-table
+class ActividadBase(models.Model):
     id = models.AutoField(primary_key=True)
-    linea_trabajo = models.ForeignKey(LineaTrabajo, related_name='actividades', on_delete=models.CASCADE)
-    producto_asociado = models.ForeignKey(ProductoAsociado, related_name='actividades', on_delete=models.SET_NULL, null=True, blank=True)
-    nombre = models.CharField(max_length=100)
-    fecha_inicio = models.DateField()
-    fecha_fin = models.DateField(null=True, blank=True)
+    nombre = models.CharField(max_length=200)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     ultima_modificacion = models.DateTimeField(auto_now=True)
-    estado = models.BooleanField(default=True)
+    estado = models.CharField(
+        max_length=3,
+        choices=EstadoActividad.choices,
+        default=EstadoActividad.PENDIENTE
+    )
+
+
+    class Meta:
+        abstract = False  # multi-table, crea tabla base
 
     def __str__(self):
         return self.nombre
+
+# Actividades normales
+class Actividad(ActividadBase):
+    linea_trabajo = models.ForeignKey(LineaTrabajo, related_name='actividades', on_delete=models.CASCADE)
+    producto_asociado = models.ForeignKey(ProductoAsociado, related_name='actividades', on_delete=models.SET_NULL, null=True, blank=True)
+
+
+# Actividades de difusión
+class ActividadDifusion(ActividadBase):
+    proyecto = models.ForeignKey(Proyecto, related_name='actividades_difusion', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"Difusión: {self.nombre}"
+
+
+# Tabla de fechas, apuntando a la clase base
+class Fecha(models.Model):
+    actividad = models.ForeignKey(
+        ActividadBase, related_name='fechas', on_delete=models.CASCADE
+    )
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField()
+    estado = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.actividad.nombre}: {self.fecha_inicio} - {self.fecha_fin}"
+
     
 class Encargado(models.Model):
     id = models.AutoField(primary_key=True)
@@ -62,7 +103,7 @@ class Encargado(models.Model):
     
 class Actividad_Encargado(models.Model):
     id = models.AutoField(primary_key=True)
-    actividad = models.ForeignKey(Actividad, related_name='actividad_encargados', on_delete=models.CASCADE)
+    actividad = models.ForeignKey(ActividadBase, related_name='actividad_encargados', on_delete=models.CASCADE)
     encargado = models.ForeignKey(Encargado, related_name='actividad_encargados', on_delete=models.CASCADE)
     fecha_asignacion = models.DateTimeField(auto_now_add=True)
     ultima_modificacion = models.DateTimeField(auto_now=True)
@@ -71,6 +112,31 @@ class Actividad_Encargado(models.Model):
     def __str__(self):
         return f"{self.actividad.nombre} - {self.encargado.nombre}"
     
-#AGREGAR LA CLASE ESTADOS
 
+class ActividadDifusion_Producto(models.Model):
+    id = models.AutoField(primary_key=True)
+    actividad = models.ForeignKey(ActividadDifusion, on_delete=models.CASCADE, related_name='actividad_productos')
+    producto_asociado = models.ForeignKey(ProductoAsociado, on_delete=models.CASCADE, related_name='actividad_productos')
+    estado = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.actividad.nombre} - {self.producto_asociado.nombre}"
+    
+
+class ActividadDifusion_Linea(models.Model):
+    id = models.AutoField(primary_key=True)
+    actividad = models.ForeignKey(ActividadDifusion, on_delete=models.CASCADE, related_name='actividad_lineas')
+    linea_trabajo = models.ForeignKey(LineaTrabajo, on_delete=models.CASCADE, related_name='actividad_lineas')
+    fecha_asignacion = models.DateTimeField(auto_now_add=True)
+    estado = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.actividad.nombre} - {self.linea_trabajo.nombre}"
+    
+class ActividadDifusion_Encargado(models.Model):
+    actividad = models.ForeignKey(ActividadDifusion, related_name='actividad_difusion_encargados', on_delete=models.CASCADE)
+    encargado = models.ForeignKey(Encargado, related_name='actividad_difusion_encargados', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.actividad.nombre} - {self.encargado.nombre}"
 
