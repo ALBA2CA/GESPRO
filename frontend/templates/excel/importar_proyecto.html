@@ -1,7 +1,5 @@
-{% load static tailwind_tags %}
-<head>
-   {% tailwind_css %}
-</head>
+{% extends 'base/navbar1.html'%}
+{% block content %}
 
 {% if messages %}
 <!-- Mensajes de éxito o error -->
@@ -102,3 +100,4 @@
   </div>
 </div>
 
+{% endblock %}
