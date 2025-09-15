@@ -89,7 +89,8 @@ class Fecha(models.Model):
     def __str__(self):
         return f"{self.actividad.nombre}: {self.fecha_inicio} - {self.fecha_fin}"
 
-    
+
+
 class Encargado(models.Model):
     id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100)
