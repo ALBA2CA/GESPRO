@@ -2,3 +2,4 @@
 __pycache__/
 *.pycbackend/databases/db.sqlite3
 gespro-env/
+databases/db.sqlite3
