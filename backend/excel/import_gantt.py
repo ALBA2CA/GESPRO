@@ -38,25 +38,29 @@ def normalize_str(s):
     s = s.encode('ASCII', 'ignore').decode('ASCII')
     return s.lower().strip()
 
-
 def obtener_fechas_reales(date_cols, anio_inicial=None):
-    """Convierte columnas de fecha en objetos date, corrigiendo año si hay retroceso de mes."""
+    """
+    Convierte columnas de fecha en objetos date, corrigiendo año si hay retroceso de mes.
+    Cada columna se mantiene como clave única.
+    date_cols: lista de columnas (pueden ser tuplas de MultiIndex o enteros)
+    """
     fechas_reales = {}
     anio_actual = anio_inicial or datetime.now().year
     mes_anterior = 0
 
     for col in date_cols:
+        # Extraer mes y día según tipo de columna
         if isinstance(col, tuple):
-            mes_str, dia_str = col[0].lower(), col[1]
-        else:
-            mes_str, dia_str = 'enero', col
+            mes_str, dia_str = str(col[0]).lower(), col[1]
 
         try:
             dia = int(dia_str)
         except (ValueError, TypeError):
             continue
 
+
         mes = MES_MAP.get(mes_str, 1)
+
         if mes < mes_anterior:
             anio_actual += 1
         mes_anterior = mes
@@ -64,7 +68,6 @@ def obtener_fechas_reales(date_cols, anio_inicial=None):
         fechas_reales[col] = date(anio_actual, mes, dia)
 
     return fechas_reales
-
 
 def separar_tablas_excel(archivo, multiindex=True):
     """
@@ -98,11 +101,9 @@ def separar_tablas_excel(archivo, multiindex=True):
 def validar_columnas_normales(df):
     """
     Valida que el DataFrame de actividades normales tenga las columnas mínimas.
-    Soporta MultiIndex o columnas planas.
     """
     info_cols = []
     for col in df.columns:
-        # Caso MultiIndex
         if isinstance(col, tuple):
             if col[1] in ['Linea de trabajo', 'Actividad', 'Responsable(s)', 'Producto Asociado']:
                 info_cols.append(col)
@@ -122,25 +123,26 @@ def validar_columnas_difusion(df):
             raise FormatoInvalidoError(f"No se encontró la columna obligatoria: {col}")
     return True
 
-def detectar_bloques_x(filas, date_cols):
-    """Devuelve lista de intervalos (fecha_inicio, fecha_fin) según X."""
+
+def detectar_bloques(fila, date_cols):
     bloques = []
     bloque_activo = None
-    col_prev = None
+    fin_col = None
 
     for col in date_cols:
-        valor = str(filas[col]).strip().lower()
-        if valor == 'x':
-            if not bloque_activo:
+        valor = fila.get(col)
+        if pd.notna(valor) and str(valor).strip():  # hay valor
+            if bloque_activo is None:
                 bloque_activo = col
+            fin_col = col
         else:
-            if bloque_activo:
-                bloques.append((bloque_activo, col_prev))
+            if bloque_activo is not None:
+                bloques.append((bloque_activo, fin_col))
                 bloque_activo = None
-        col_prev = col
+                fin_col = None
 
-    if bloque_activo:
-        bloques.append((bloque_activo, col_prev))
+    if bloque_activo is not None:
+        bloques.append((bloque_activo, fin_col))
 
     return bloques
 
@@ -154,6 +156,7 @@ def crear_proyecto_con_actividades_normales(nombre_proyecto, df_normales):
     fechas_reales = obtener_fechas_reales(date_cols)
     if not fechas_reales:
         raise FormatoInvalidoError("No se encontraron columnas de fechas válidas en el archivo.")
+    date_cols = [c for c in date_cols if c in fechas_reales]
 
     proyecto = Proyecto.objects.create(
         nombre=nombre_proyecto,
@@ -161,20 +164,16 @@ def crear_proyecto_con_actividades_normales(nombre_proyecto, df_normales):
         fecha_fin=None
     )
 
-    ultima_linea = None
     primera_fecha = None
     ultima_fecha = None
-
-    multiindex = isinstance(df_normales.columns, pd.MultiIndex)
+    ultima_linea = None
 
     for idx, row in df_normales.iterrows():
         # Línea de trabajo
-
         linea = row.get(('Unnamed: 0_level_0', 'Linea de trabajo'))
         producto_nombre = row.get(('Unnamed: 5_level_0', 'Producto Asociado'))
         actividad_nombre = row.get(('Unnamed: 3_level_0', 'Actividad'))
         responsables = row.get(('Unnamed: 4_level_0', 'Responsable(s)'))
-
 
         if pd.notna(linea):
             ultima_linea = linea
@@ -189,7 +188,7 @@ def crear_proyecto_con_actividades_normales(nombre_proyecto, df_normales):
         # Producto asociado
         producto_obj = None
         if pd.notna(producto_nombre):
-            producto_obj = ProductoAsociado.objects.filter(nombre__iexact=producto_nombre).first()
+            producto_obj = ProductoAsociado.objects.filter(nombre__iexact=producto_nombre, proyecto=proyecto).first()
             if not producto_obj:
                 producto_obj = ProductoAsociado.objects.create(nombre=producto_nombre, extension='', proyecto=proyecto)
 
@@ -197,7 +196,7 @@ def crear_proyecto_con_actividades_normales(nombre_proyecto, df_normales):
         if pd.isna(actividad_nombre):
             continue
 
-        bloques = detectar_bloques_x(row, date_cols)
+        bloques = detectar_bloques(row, date_cols)
         if not bloques:
             continue
 
@@ -214,7 +213,6 @@ def crear_proyecto_con_actividades_normales(nombre_proyecto, df_normales):
             if fecha_inicio and fecha_fin:
                 Fecha.objects.create(actividad=actividad_obj, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin)
 
-                # Actualizamos fechas de proyecto
                 if primera_fecha is None or fecha_inicio < primera_fecha:
                     primera_fecha = fecha_inicio
                 if ultima_fecha is None or fecha_fin > ultima_fecha:
@@ -222,34 +220,56 @@ def crear_proyecto_con_actividades_normales(nombre_proyecto, df_normales):
 
         # Encargados
         if pd.notna(responsables):
-            for r in str(responsables).split('y'):
+            for r in str(responsables).split(';'):
                 r = r.strip()
-                if r:
-                    encargado_obj = Encargado.objects.filter(nombre__iexact=r).first()
-                    if not encargado_obj:
-                        encargado_obj = Encargado.objects.create(nombre=r, correo_electronico='')
-                    Actividad_Encargado.objects.get_or_create(
-                        actividad=actividad_obj,
-                        encargado=encargado_obj
-                    )
+                if not r:
+                    continue
+
+                partes = r.split(':')
+                if len(partes) == 2:
+                    nombre = partes[0].strip()
+                    correo = partes[1].strip()
+                else:
+                    nombre = r
+                    correo = ""
+
+                encargado_obj = Encargado.objects.filter(correo_electronico__iexact=correo).first() if correo else None
+                if not encargado_obj:
+                    encargado_obj = Encargado.objects.filter(nombre__iexact=nombre).first()
+                if not encargado_obj:
+                    encargado_obj = Encargado.objects.create(nombre=nombre, correo_electronico=correo)
+
+                Actividad_Encargado.objects.get_or_create(
+                    actividad=actividad_obj,
+                    encargado=encargado_obj
+                )
 
     # Actualizar fechas del proyecto
-    proyecto.fecha_inicio = primera_fecha
-    proyecto.fecha_fin = ultima_fecha
+    proyecto.fecha_inicio = primera_fecha or datetime.now().date()
+    proyecto.fecha_fin = ultima_fecha or proyecto.fecha_inicio
     proyecto.save()
 
     return proyecto, date_cols, fechas_reales
 
 
+# =========================
+# Función de difusión
+# =========================
 def crear_actividades_difusion(proyecto, df_difusion, date_cols, fechas_reales):
     """
-    Crea las actividades de difusión de un proyecto ya creado.
-    Reutiliza date_cols y fechas_reales de las actividades normales.
+    Crea actividades de difusión reutilizando date_cols y fechas_reales de actividades normales.
     """
+
     COL_ACTIVIDAD = 'Actividad de Difusión'
     COL_RESPONSABLE = 'Responsable de la Actividad de Difusión'
     COL_PRODUCTO = 'Producto(s) Asociado(s)'
     COL_LINEA = 'Línea(s) de Trabajo Asociada(s)'
+
+
+    # Mapear columnas de fechas de normales a difusión
+    n_fechas = len(date_cols)
+    df_fechas_difusion = df_difusion.iloc[:, -n_fechas:].copy()
+    df_fechas_difusion.columns = date_cols  # Reutilizamos columnas de normales
 
     for idx, row in df_difusion.iterrows():
         actividad_nombre = row.get(COL_ACTIVIDAD)
@@ -267,11 +287,7 @@ def crear_actividades_difusion(proyecto, df_difusion, date_cols, fechas_reales):
         for p_nombre in productos:
             producto_obj = ProductoAsociado.objects.filter(nombre__iexact=p_nombre, proyecto=proyecto).first()
             if not producto_obj:
-                producto_obj = ProductoAsociado.objects.create(
-                    nombre=p_nombre,
-                    extension='',
-                    proyecto=proyecto
-                )
+                producto_obj = ProductoAsociado.objects.create(nombre=p_nombre, extension='', proyecto=proyecto)
             ActividadDifusion_Producto.objects.get_or_create(
                 actividad=actividad_obj,
                 producto_asociado=producto_obj
@@ -289,9 +305,8 @@ def crear_actividades_difusion(proyecto, df_difusion, date_cols, fechas_reales):
                 actividad=actividad_obj,
                 linea_trabajo=linea_obj
             )
-
-        # Fechas según X: reutilizamos date_cols y fechas_reales
-        bloques = detectar_bloques_x(row, date_cols)
+        # Fechas de la actividad
+        bloques = detectar_bloques(df_fechas_difusion.loc[idx], date_cols)
         for inicio_col, fin_col in bloques:
             fecha_inicio = fechas_reales.get(inicio_col)
             fecha_fin = fechas_reales.get(fin_col)
@@ -301,47 +316,69 @@ def crear_actividades_difusion(proyecto, df_difusion, date_cols, fechas_reales):
                     fecha_inicio=fecha_inicio,
                     fecha_fin=fecha_fin
                 )
-
-                # Actualizar fechas del proyecto si corresponde
+            if fecha_inicio is not None:
                 if proyecto.fecha_inicio is None or fecha_inicio < proyecto.fecha_inicio:
                     proyecto.fecha_inicio = fecha_inicio
+            if fecha_fin is not None:
                 if proyecto.fecha_fin is None or fecha_fin > proyecto.fecha_fin:
                     proyecto.fecha_fin = fecha_fin
-                proyecto.save()
 
         # Encargados
         responsables = row.get(COL_RESPONSABLE, '')
         if pd.notna(responsables):
-            for r in str(responsables).split('y'):
+            for r in str(responsables).split(';'):
                 r = r.strip()
-                if r:
-                    encargado_obj = Encargado.objects.filter(nombre__iexact=r).first()
-                    if not encargado_obj:
-                        encargado_obj = Encargado.objects.create(nombre=r, correo_electronico='')
-                    ActividadDifusion_Encargado.objects.get_or_create(
-                        actividad=actividad_obj,
-                        encargado=encargado_obj
-                    )
+                if not r:
+                    continue
+
+                partes = r.split(':')
+                if len(partes) == 2:
+                    nombre = partes[0].strip()
+                    correo = partes[1].strip()
+                else:
+                    nombre = r
+                    correo = ""
+
+                encargado_obj = Encargado.objects.filter(correo_electronico__iexact=correo).first() if correo else None
+                if not encargado_obj:
+                    encargado_obj = Encargado.objects.filter(nombre__iexact=nombre).first()
+                if not encargado_obj:
+                    encargado_obj = Encargado.objects.create(nombre=nombre, correo_electronico=correo)
+
+                ActividadDifusion_Encargado.objects.get_or_create(
+                    actividad=actividad_obj,
+                    encargado=encargado_obj
+                )
+    proyecto.save()
+
 
 # =========================
-# Función de importación general
+# Función general de importación
 # =========================
 def importar_gantt(nombre_proyecto, archivo_excel):
-    """Importa un Excel Gantt a Django."""
     if not archivo_excel.name.endswith(('.xls', '.xlsx')):
         raise FormatoInvalidoError("El archivo debe ser Excel (.xls o .xlsx)")
 
     df_normales, df_difusion = separar_tablas_excel(archivo_excel)
 
     with transaction.atomic():
-        proyecto, date_cols, fechas_reales = crear_proyecto_con_actividades_normales(nombre_proyecto, df_normales)
-        # ---- Aquí conviertes fechas_reales a formato plano para difusión ----
-        fechas_reales_planas = {}
-        for k, v in fechas_reales.items():
-            if isinstance(k, tuple):
-                fechas_reales_planas[k[1]] = v  # usamos solo el nombre de columna
-            else:
-                fechas_reales_planas[k] = v
-        date_cols_normales = list(fechas_reales_planas.keys())
-        validar_columnas_difusion(df_difusion)
-        crear_actividades_difusion(proyecto, df_difusion, date_cols_normales, fechas_reales_planas)
+
+        validar_columnas_normales(df_normales)
+        proyecto, date_cols, fechas_reales = crear_proyecto_con_actividades_normales(nombre_proyecto, df_normales)      
+        validar_columnas_difusion(df_difusion)   
+        crear_actividades_difusion(proyecto, df_difusion, date_cols, fechas_reales)
+
+def informacion_proyecto(df_normales, df_difusion):
+    """Devuelve un resumen de la información del proyecto a importar."""
+    info = {}
+    # Actividades normales
+    info['Actividades'] = len(df_normales)
+    info['Líneas de trabajo'] = df_normales[('Unnamed: 0_level_0', 'Linea de trabajo')].nunique()
+
+
+    # Actividades de difusión
+    info['Actividades de difusión'] = len(df_difusion)
+    info['Líneas de trabajo de difusión'] = df_difusion['Línea(s) de Trabajo Asociada(s)'].nunique()
+
+
+    return info
