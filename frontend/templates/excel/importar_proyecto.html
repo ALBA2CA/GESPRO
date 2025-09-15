@@ -1,0 +1,104 @@
+{% load static tailwind_tags %}
+<head>
+   {% tailwind_css %}
+</head>
+
+{% if messages %}
+<!-- Mensajes de éxito o error -->
+<div class="mt-3 space-y-2">
+  {% for message in messages %}
+      <script>
+    setTimeout(() => {
+      const mensajes = document.querySelectorAll('.mt-3 .px-4');
+      mensajes.forEach(m => m.remove());
+    }, 10000); // desaparece después de 10s
+  </script>
+    <div class="
+      px-4 py-2 rounded-lg text-sm font-medium 
+      {% if message.tags == 'success' %}
+        bg-green-100 text-green-700 border border-green-300
+      {% elif message.tags == 'error' %}
+        bg-red-100 text-red-700 border border-red-300
+      {% elif message.tags == 'warning' %}
+        bg-yellow-100 text-yellow-800 border border-yellow-300
+      {% else %}
+        bg-gray-100 text-gray-700 border border-gray-300
+      {% endif %}
+    ">
+      {{ message }}
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% load widget_tweaks %}
+
+<!-- Contenedor -->
+<div class="flex flex-col items-center gap-4 py-6 relative min-w-[250px] text-white">
+
+  <!-- Formulario -->
+  <form method="post" enctype="multipart/form-data" action="{% url 'verificar_proyecto' %}"
+        class="space-y-4 p-6 border border-black rounded-xl bg-gray-800 text-white">
+      {% csrf_token %}
+
+      {% for field in form %}
+        <div class="space-y-1">
+          <label class="block text-white font-medium">{{ field.label }}</label>
+          {{ field|add_class:"w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900" }}
+          {% if field.errors %}
+            <p class="text-red-500 text-sm">{{ field.errors }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+
+
+      <button type="submit" 
+              class="w-full bg-green-600 hover:bg-green-700 
+                     text-white font-semibold py-4 px-4 
+                     rounded-lg shadow transition">
+          Crear Proyecto
+      </button>
+  </form>
+
+  <!-- Enlace para descargar la plantilla de Gantt -->
+  <a href="{% url 'descargar_plantilla' %}" 
+     class="block text-center bg-blue-600 hover:bg-blue-700 
+            text-white font-semibold py-2 px-4 
+            rounded-lg shadow transition">
+      Descargar plantilla Gantt
+  </a>
+</div>
+
+<!-- Modal de verificación de datos -->
+<div id="modal-verificacion" tabindex="-1" aria-hidden="true" class="{% if mostrar_modal %}flex{% else %}hidden{% endif %} fixed inset-0 bg-black/75 items-center justify-center z-50">
+  <div class="bg-gray-900 rounded-lg p-6 w-11/12 max-w-lg">
+    <h2 class="text-xl font-bold mb-4">Verificación de Datos</h2>
+    <div id="datos-verificacion" class="mb-4 max-h-64 overflow-y-auto">
+      <h3 class="text-lg font-semibold mb-2">Datos de <strong>{{info_proyecto.Nombre_del_Proyecto}}</strong>:</h3>
+      
+      {% if info_proyecto %}
+        <ul class="list-disc list-inside space-y-2">
+          {% for key, value in info_proyecto.items %}
+            {% if key != 'Nombre_del_Proyecto' %}
+              <li>
+                <strong>{{ key }}:</strong> {{ value }}
+              </li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No hay datos para verificar.</p>
+      {% endif %}
+    </div>
+    <div class="flex justify-end space-x-4">
+      <button id="btn-cancelar" onclick="document.getElementById('modal-verificacion').classList.add('hidden')" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancelar</button>
+      <form method="post" action="{% url 'importar_proyecto' %}">
+        {% csrf_token %}
+        <input type="hidden" name="nombre_proyecto" value="{{ info_proyecto.Nombre_del_Proyecto }}">
+        <input type="hidden" name="archivo" value="{{ archivo }}">
+        <button type="submit" id="btn-confirmar"  class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg">Confirmar</button>
+      </form>
+    </div>
+  </div>
+</div>
+

@@ -22,6 +22,8 @@ from proyectos import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('proyectos/',include('proyectos.urls')),
+    path('excel/',include('excel.urls'))
+    
 ]
 
 if settings.DEBUG:
