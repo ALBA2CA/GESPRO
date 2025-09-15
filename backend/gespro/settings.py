@@ -80,7 +80,7 @@ WSGI_APPLICATION = 'gespro.wsgi.application'
 DATABASES = {
     'default': {
          'ENGINE': 'django.db.backends.sqlite3',
-         'NAME': BASE_DIR / 'backend' / 'databases' / 'db.sqlite3',
+         'NAME': BASE_DIR  / 'databases' / 'db.sqlite3',
      }
  }
 # DATABASES = {
