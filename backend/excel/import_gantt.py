@@ -2,7 +2,7 @@ import os
 import django
 import pandas as pd
 import unicodedata
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from django.db import transaction
 
 # Configurar Django
@@ -213,6 +213,22 @@ def crear_proyecto_con_actividades_normales(nombre_proyecto, df_normales):
             if fecha_inicio and fecha_fin:
                 Fecha.objects.create(actividad=actividad_obj, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin)
 
+                # Crear las alertas iniciales para la actividad
+                for dias_antes in [3, 7, 14]:
+                    fecha_envio = fecha_fin - timedelta(days=dias_antes)
+                    if fecha_envio >= datetime.now().date():
+                        Alerta.objects.create(
+                            actividad=actividad_obj,
+                            fecha_envio=fecha_envio,
+                            enviado=True
+                        )
+                    else:
+                        Alerta.objects.create(
+                            actividad=actividad_obj,
+                            fecha_envio=fecha_envio,
+                            enviado=False
+                         )
+
                 if primera_fecha is None or fecha_inicio < primera_fecha:
                     primera_fecha = fecha_inicio
                 if ultima_fecha is None or fecha_fin > ultima_fecha:
@@ -316,12 +332,30 @@ def crear_actividades_difusion(proyecto, df_difusion, date_cols, fechas_reales):
                     fecha_inicio=fecha_inicio,
                     fecha_fin=fecha_fin
                 )
-            if fecha_inicio is not None:
-                if proyecto.fecha_inicio is None or fecha_inicio < proyecto.fecha_inicio:
-                    proyecto.fecha_inicio = fecha_inicio
-            if fecha_fin is not None:
-                if proyecto.fecha_fin is None or fecha_fin > proyecto.fecha_fin:
-                    proyecto.fecha_fin = fecha_fin
+                
+                # Crear las alertas iniciales para la actividad de difusión
+                for dias_antes in [3, 7, 14]:
+                    fecha_envio = fecha_fin - timedelta(days=dias_antes)
+                    if fecha_envio >= datetime.now().date():
+                        Alerta.objects.create(
+                            actividad=actividad_obj,
+                            fecha_envio=fecha_envio,
+                            enviado=True
+                        )
+                    else:
+                        Alerta.objects.create(
+                            actividad=actividad_obj,
+                            fecha_envio=fecha_envio,
+                            enviado=False
+                         )
+
+
+                if fecha_inicio is not None:
+                    if proyecto.fecha_inicio is None or fecha_inicio < proyecto.fecha_inicio:
+                        proyecto.fecha_inicio = fecha_inicio
+                if fecha_fin is not None:
+                    if proyecto.fecha_fin is None or fecha_fin > proyecto.fecha_fin:
+                        proyecto.fecha_fin = fecha_fin
 
         # Encargados
         responsables = row.get(COL_RESPONSABLE, '')
