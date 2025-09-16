@@ -93,7 +93,7 @@ class Alerta(models.Model):
     id = models.AutoField(primary_key=True)
     actividad = models.ForeignKey(ActividadBase, related_name='alertas', on_delete=models.CASCADE)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
-    fecha_envio = models.DateTimeField(db_index=True) # Índice para optimizar consultas por fecha_envio
+    fecha_envio = models.DateTimeField(db_index=True)
     enviado = models.BooleanField(default=True)
 
     def __str__(self):
