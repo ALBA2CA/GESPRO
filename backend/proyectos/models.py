@@ -89,7 +89,15 @@ class Fecha(models.Model):
     def __str__(self):
         return f"{self.actividad.nombre}: {self.fecha_inicio} - {self.fecha_fin}"
 
+class Alerta(models.Model):
+    id = models.AutoField(primary_key=True)
+    actividad = models.ForeignKey(ActividadBase, related_name='alertas', on_delete=models.CASCADE)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_envio = models.DateTimeField(db_index=True) # Índice para optimizar consultas por fecha_envio
+    enviado = models.BooleanField(default=True)
 
+    def __str__(self):
+        return f"Alerta para {self.actividad.nombre}: {self.fecha_envio}"
 
 class Encargado(models.Model):
     id = models.AutoField(primary_key=True)
