@@ -19,10 +19,13 @@ from django.contrib import admin
 from django.urls import path, include
 from proyectos import views
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('proyectos/',include('proyectos.urls')),
-    path('excel/',include('excel.urls'))
+    path('excel/',include('excel.urls')),
+    path('vistas/', include('vistas.urls')),
+    path('',views.home, name = 'home')  # Agrega esta línea para incluir las URLs de la app vistas
     
 ]
 
