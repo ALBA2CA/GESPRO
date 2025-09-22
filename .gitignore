@@ -5,5 +5,4 @@ gespro-env/
 
 databases/*.sqlite3
 
-frontend/theme/
 .env
