@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'theme',
     'proyectos',
+    'alertas',
 ]
 
 MIDDLEWARE = [
