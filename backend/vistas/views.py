@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from proyectos.models import Proyecto, Actividad, ActividadDifusion
+from datetime import datetime, timedelta
 
-# Create your views here.
 def vista_gantt(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
 
@@ -18,51 +18,69 @@ def vista_gantt(request, proyecto_id):
     for actividad in actividades_normales:
         # Obtener todas las fechas activas
         fechas = actividad.fechas.filter(estado=True)
-
+        
+        fechas_lista = []
+        for fecha in fechas:
+            # Ajustar fechas para evitar duración 0
+            fecha_inicio = fecha.fecha_inicio
+            fecha_fin = fecha.fecha_fin
+            
+            # Si las fechas son iguales, agregar un día a la fecha fin
+            if fecha_inicio and fecha_fin and fecha_inicio == fecha_fin:
+                fecha_fin = fecha_fin + timedelta(days=1)
+            
+            fecha_dict = {
+                "fecha_inicio": fecha_inicio.strftime('%Y-%m-%d') if fecha_inicio else None,
+                "fecha_fin": fecha_fin.strftime('%Y-%m-%d') if fecha_fin else None
+            }
+            fechas_lista.append(fecha_dict)
         
         todas_actividades.append({
             'id': actividad.id,
-            'nombre': actividad.nombre,
-            "fechas": [ {"fecha_inicio": fecha.fecha_inicio, "fecha_fin": fecha.fecha_fin} for fecha in fechas ] if fechas.exists() else [],
+            'nombre': actividad.nombre or f"Actividad {actividad.id}",
+            "fechas": fechas_lista,
             'tipo': 'Normal',
-            'estado': actividad.get_estado_display(),
-            'linea_trabajo': actividad.linea_trabajo.nombre,
+            'estado': actividad.get_estado_display() if hasattr(actividad, 'get_estado_display') else 'Sin estado',
+            'linea_trabajo': actividad.linea_trabajo.nombre if actividad.linea_trabajo else 'Sin línea',
         })
     
     # Agregar actividades de difusión
     for actividad in actividades_difusion:
-
         fechas = actividad.fechas.filter(estado=True)
+        
+        fechas_lista = []
+        for fecha in fechas:
+            # Ajustar fechas para evitar duración 0
+            fecha_inicio = fecha.fecha_inicio
+            fecha_fin = fecha.fecha_fin
+            
+            # Si las fechas son iguales, agregar un día a la fecha fin
+            if fecha_inicio and fecha_fin and fecha_inicio == fecha_fin:
+                fecha_fin = fecha_fin + timedelta(days=1)
+            
+            fecha_dict = {
+                "fecha_inicio": fecha_inicio.strftime('%Y-%m-%d') if fecha_inicio else None,
+                "fecha_fin": fecha_fin.strftime('%Y-%m-%d') if fecha_fin else None
+            }
+            fechas_lista.append(fecha_dict)
         
         todas_actividades.append({
             'id': actividad.id,
-            'nombre': actividad.nombre,
-            'fechas': [ {"fecha_inicio": fecha.fecha_inicio, "fecha_fin": fecha.fecha_fin} for fecha in fechas ] if fechas.exists() else [],
+            'nombre': actividad.nombre or f"Actividad Difusión {actividad.id}",
+            'fechas': fechas_lista,
             'tipo': 'Difusión',
-            'estado': actividad.get_estado_display(),
-            'linea_trabajo': None,  # Las actividades de difusión no tienen línea de trabajo directa
+            'estado': actividad.get_estado_display() if hasattr(actividad, 'get_estado_display') else 'Sin estado',
+            'linea_trabajo': None,
         })
 
-    # Ordenar todas las actividades por fecha de inicio (las que no tienen fecha van al final)
-    todas_actividades.sort(key=lambda x: x['fechas'][0]['fecha_inicio'] if x['fechas'] else None)
-    
-    # convertir cada fecha en una "subtarea" con distinto id pero mismo name
-    tareas = []
-    for actividad in todas_actividades:
-        for i, f in enumerate(actividad["fechas"], start=1):
-            tareas.append({
-            "id": f"T{actividad['id']}_{i}",
-            "name": actividad["nombre"],   # mismo nombre => misma fila
-            "start": str(f["fecha_inicio"]),
-            "end": str(f["fecha_fin"]),
-            "progress": 0,
-        })
+    # Ordenar todas las actividades por fecha de inicio
+    todas_actividades.sort(key=lambda x: x['fechas'][0]['fecha_inicio'] if x['fechas'] and x['fechas'][0]['fecha_inicio'] else '9999-12-31')
+
     
     context = {
         'proyecto': proyecto,
         "len_total_actividades": len(todas_actividades),
         "total_actividades": todas_actividades,
-        "tareas": tareas
     }
 
     return render(request, 'vistas/vista_gantt.html', context)

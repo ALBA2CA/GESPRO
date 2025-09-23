@@ -2,227 +2,495 @@
 {% block title %}Vista Gantt - {{ proyecto.nombre }}{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="https://unpkg.com/frappe-gantt/dist/frappe-gantt.css">
-
 <div class="container mx-auto px-4 py-6">
-
-    <!-- Layout principal: Tabla a la izquierda, Gantt a la derecha -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">Vista Gantt - {{ proyecto.nombre }}</h2>
         
-        <!-- TABLA DE ACTIVIDADES (Izquierda) -->
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-gray-800">Actividades</h2>
-                <span class="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
-                    Total: {{ len_total_actividades }} actividades
-                </span>
-            </div>
-            
-            {% if total_actividades %}
-                <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white border border-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
-                                    Actividad
-                                </th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
-                                    Tipo
-                                </th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
-                                    Estado
-                                </th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
-                                    Fechas
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            {% for actividad in total_actividades %}
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-3">
-                                    <div class="text-sm font-medium text-gray-900">{{ actividad.nombre }}</div>
-                                    {% if actividad.linea_trabajo %}
-                                        <div class="text-xs text-gray-500">{{ actividad.linea_trabajo }}</div>
-                                    {% endif %}
-                                </td>
-                                <td class="px-4 py-3">
-                                    {% if actividad.tipo == 'Normal' %}
-                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                            Normal
-                                        </span>
-                                    {% else %}
-                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                            Difusión
-                                        </span>
-                                    {% endif %}
-                                </td>
-                                <td class="px-4 py-3">
-                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                        {{ actividad.estado }}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-900">
+        <!-- Gantt con columnas semanales -->
+        <div class="overflow-x-auto border rounded-lg">
+            <div class="gantt-container" style="min-width: 2000px;">
+                <!-- Header con fechas semanales -->
+                <div class="gantt-header flex bg-gray-100 border-b-2 border-gray-300 sticky top-0 z-10">
+                    <div class="w-80 p-3 font-bold text-gray-700 border-r border-gray-300 bg-gray-100">
+                        Actividad
+                    </div>
+                    <div class="flex" id="date-header">
+                        <!-- Fechas semanales se generarán aquí -->
+                    </div>
+                </div>
+                
+                <!-- Filas de actividades agrupadas -->
+                <div class="gantt-rows">
+                    {% for actividad in total_actividades %}
+                        <div class="gantt-row flex border-b border-gray-200 hover:bg-gray-50" data-activity-id="{{ actividad.id }}">
+                            <!-- Información de la actividad -->
+                            <div class="w-80 p-3 border-r border-gray-300 bg-white">
+                                <div class="font-medium text-gray-800">{{ actividad.nombre }}</div>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    <!-- Mostrar rango completo de fechas -->
                                     {% if actividad.fechas %}
-                                        {% for fecha in actividad.fechas %}
-                                            <div class="text-xs mb-1">
-                                                {% if fecha.fecha_inicio and fecha.fecha_fin %}
-                                                    {{ fecha.fecha_inicio|date:"d/m/Y" }} - {{ fecha.fecha_fin|date:"d/m/Y" }}
-                                                {% elif fecha.fecha_inicio %}
-                                                    Desde: {{ fecha.fecha_inicio|date:"d/m/Y" }}
-                                                {% elif fecha.fecha_fin %}
-                                                    Hasta: {{ fecha.fecha_fin|date:"d/m/Y" }}
-                                                {% endif %}
-                                            </div>
-                                        {% endfor %}
-                                    {% else %}
-                                        <span class="text-gray-400 text-xs">Sin fechas</span>
+                                        {% with actividad.fechas|first as primera_fecha %}
+                                        {% with actividad.fechas|last as ultima_fecha %}
+                                            {{ primera_fecha.fecha_inicio }} - {{ ultima_fecha.fecha_fin }}
+                                        {% endwith %}
+                                        {% endwith %}
                                     {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                </div>
+                                <div class="text-xs mt-1">
+                                    <span class="px-2 py-1 rounded text-xs {% if actividad.tipo == 'Normal' %}bg-blue-100 text-blue-800{% else %}bg-green-100 text-green-800{% endif %}">
+                                        {{ actividad.tipo }}
+                                    </span>
+                                    {% if actividad.fechas|length > 1 %}
+                                        <span class="ml-2 px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
+                                            {{ actividad.fechas|length }} período{% if actividad.fechas|length > 1 %}s{% endif %}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                {% if actividad.linea_trabajo %}
+                                    <div class="text-xs text-gray-400 mt-1">{{ actividad.linea_trabajo }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Timeline con múltiples barras -->
+                            <div class="timeline-container relative h-16 bg-gray-50" data-activity-type="{{ actividad.tipo }}">
+                                <!-- Las barras se generarán aquí con JavaScript -->
+                                {% for fecha in actividad.fechas %}
+                                    {% if fecha.fecha_inicio and fecha.fecha_fin %}
+                                        <div class="gantt-bar absolute top-2 h-12 rounded flex items-center justify-center text-white text-sm font-medium
+                                                    {% if actividad.tipo == 'Normal' %}bg-blue-500{% else %}bg-green-500{% endif %}"
+                                             data-start="{{ fecha.fecha_inicio }}"
+                                             data-end="{{ fecha.fecha_fin }}"
+                                             data-name="{{ actividad.nombre }}"
+                                             data-period="{{ forloop.counter }}"
+                                             style="left: 0%; width: 100px; min-width: 60px;">
+                                            <span class="truncate px-2 text-xs">{{ actividad.nombre|truncatechars:20 }}</span>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
                 </div>
-            {% else %}
-                <div class="text-center py-8">
-                    <h3 class="mt-2 text-sm font-medium text-gray-900">No hay actividades</h3>
-                    <p class="mt-1 text-sm text-gray-500">No se encontraron actividades para este proyecto.</p>
-                </div>
-            {% endif %}
+            </div>
         </div>
-
-        <!-- DIAGRAMA DE GANTT (Derecha) -->
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-gray-800">Diagrama de Gantt</h2>
+        
+        <!-- Leyenda -->
+        <div class="flex justify-center mt-6 space-x-6">
+            <div class="flex items-center">
+                <div class="w-4 h-4 bg-blue-500 rounded mr-2"></div>
+                <span class="text-sm text-gray-600">Actividades Normales</span>
             </div>
-            
-            <!-- Contenedor del diagrama de Gantt -->
-            <div id="gantt" class="w-full overflow-x-auto" style="min-height: 400px;">
-                <p class="text-gray-500">Cargando diagrama...</p>
+            <div class="flex items-center">
+                <div class="w-4 h-4 bg-green-500 rounded mr-2"></div>
+                <span class="text-sm text-gray-600">Actividades de Difusión</span>
             </div>
+        </div>
+        
+        <!-- Info -->
+        <div class="text-center text-sm text-gray-500 mt-4">
+            <span id="info-text">Cargando fechas...</span>
         </div>
     </div>
 </div>
 
-<script src="https://unpkg.com/frappe-gantt/dist/frappe-gantt.umd.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('=== DEBUG GANTT ===');
-        
-        // Datos desde Django
-        const tareasRaw = '{{ tareas|safe|escapejs }}';
-        console.log('1. Datos raw recibidos:', tareasRaw);
-        console.log('2. Tipo de datos:', typeof tareasRaw);
-        console.log('3. Longitud:', tareasRaw.length);
-        
-        // Verificar si está vacío
-        if (!tareasRaw || tareasRaw.trim() === '' || tareasRaw === '[]') {
-            console.warn('No hay datos de tareas');
-            document.getElementById('gantt').innerHTML = `
-                <div class="text-center py-8">
-                    <div class="text-yellow-600">
-                        <p class="font-semibold">No hay datos para el Gantt</p>
-                        <p class="text-sm mt-1">No se encontraron actividades con fechas válidas.</p>
-                    </div>
-                </div>
-            `;
-            return;
-        }
-        
-        try {
-            const tasks = JSON.parse(tareasRaw);
-            console.log('4. Tareas parseadas correctamente:', tasks);
-            console.log('5. Número de tareas:', tasks.length);
-            
-            if (tasks && tasks.length > 0) {
-                // Mostrar cada tarea para debug
-                tasks.forEach((task, index) => {
-                    console.log(`Tarea ${index}:`, task);
-                });
-                
-                // Filtrar tareas válidas
-                const validTasks = tasks.filter(task => {
-                    const isValid = task.start && task.end && 
-                                   task.start !== 'None' && task.end !== 'None' &&
-                                   task.start !== null && task.end !== null;
-                    console.log(`Tarea ${task.id} válida:`, isValid, {start: task.start, end: task.end});
-                    return isValid;
-                });
-                
-                console.log('6. Tareas válidas:', validTasks);
-                
-                if (validTasks.length > 0) {
-                    try {
-                        // Crear el Gantt
-                        const gantt = new Gantt("#gantt", validTasks, {
-                            view_mode: 'Day',
-                            date_format: 'YYYY-MM-DD',
-                            bar_height: 30,
-                            bar_corner_radius: 3,
-                            padding: 18,
-                            custom_popup_html: function(task) {
-                                return `
-                                    <div class="p-3 bg-white border rounded shadow-lg">
-                                        <h5 class="font-bold text-gray-800 mb-2">${task.name}</h5>
-                                        <div class="space-y-1 text-sm text-gray-600">
-                                            <div><strong>Inicio:</strong> ${task.start}</div>
-                                            <div><strong>Fin:</strong> ${task.end}</div>
-                                            <div><strong>ID:</strong> ${task.id}</div>
-                                        </div>
-                                    </div>
-                                `;
-                            }
-                        });
-                        
-                        console.log('7. Gantt creado exitosamente');
-                        
-                    } catch (ganttError) {
-                        console.error('Error al crear Gantt:', ganttError);
-                        document.getElementById('gantt').innerHTML = `
-                            <div class="text-center py-8">
-                                <div class="text-red-500">
-                                    <p class="font-semibold">Error al crear el diagrama</p>
-                                    <p class="text-sm mt-1">${ganttError.message}</p>
-                                </div>
-                            </div>
-                        `;
-                    }
-                } else {
-                    console.warn('No hay tareas válidas');
-                    document.getElementById('gantt').innerHTML = `
-                        <div class="text-center py-8">
-                            <div class="text-yellow-600">
-                                <p class="font-semibold">Sin fechas válidas</p>
-                                <p class="text-sm mt-1">Las actividades no tienen fechas de inicio y fin definidas.</p>
-                            </div>
-                        </div>
-                    `;
-                }
-            } else {
-                console.warn('Array de tareas vacío');
-                document.getElementById('gantt').innerHTML = `
-                    <div class="text-center py-8">
-                        <div class="text-gray-500">
-                            <p class="font-semibold">No hay actividades</p>
-                        </div>
-                    </div>
-                `;
-            }
-        } catch (error) {
-            console.error('Error JSON:', error);
-            console.error('Datos que causaron el error:', tareasRaw);
-            document.getElementById('gantt').innerHTML = `
-                <div class="text-center py-8">
-                    <div class="text-red-500">
-                        <p class="font-semibold">Error al cargar los datos</p>
-                        <p class="text-sm mt-1">${error.message}</p>
-                        <p class="text-xs mt-2">Datos recibidos: "${tareasRaw.substring(0, 100)}..."</p>
-                    </div>
-                </div>
-            `;
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Inicializando Gantt agrupado...');
+    
+    // Obtener todas las barras
+    const ganttBars = document.querySelectorAll('.gantt-bar');
+    
+    if (ganttBars.length === 0) {
+        console.log('No hay actividades');
+        return;
+    }
+    
+    // Obtener fechas mínima y máxima
+    let allDates = [];
+    ganttBars.forEach(bar => {
+        const start = new Date(bar.dataset.start);
+        const end = new Date(bar.dataset.end);
+        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+            allDates.push(start, end);
         }
     });
+    
+    if (allDates.length === 0) {
+        console.log('No hay fechas válidas');
+        return;
+    }
+    
+    // Calcular rango de fechas
+    const minDate = new Date(Math.min(...allDates));
+    const maxDate = new Date(Math.max(...allDates));
+    
+    // Ajustar al inicio de la semana (lunes)
+    const startOfWeek = new Date(minDate);
+    const dayOfWeek = startOfWeek.getDay();
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    startOfWeek.setDate(startOfWeek.getDate() - daysToSubtract - 7);
+    
+    // Ajustar al final de la semana (domingo)
+    const endOfWeek = new Date(maxDate);
+    const endDayOfWeek = endOfWeek.getDay();
+    const daysToAdd = endDayOfWeek === 0 ? 7 : 7 - endDayOfWeek;
+    endOfWeek.setDate(endOfWeek.getDate() + daysToAdd + 7);
+    
+    // Calcular número de semanas
+    const totalWeeks = Math.ceil((endOfWeek - startOfWeek) / (1000 * 60 * 60 * 24 * 7));
+    const weekWidth = 100;
+    
+    console.log('Configuración:', {
+        inicio: startOfWeek.toDateString(),
+        fin: endOfWeek.toDateString(),
+        semanas: totalWeeks,
+        anchoTotal: totalWeeks * weekWidth
+    });
+    
+    // Generar header semanal
+    const dateHeader = document.getElementById('date-header');
+    dateHeader.innerHTML = '';
+    
+    for (let week = 0; week < totalWeeks; week++) {
+        const weekStart = new Date(startOfWeek);
+        weekStart.setDate(startOfWeek.getDate() + (week * 7));
+        
+        const weekDiv = document.createElement('div');
+        weekDiv.className = 'week-column text-center border-r border-gray-300 bg-gray-100';
+        weekDiv.style.width = `${weekWidth}px`;
+        weekDiv.style.minWidth = `${weekWidth}px`;
+        weekDiv.style.flex = 'none';
+        
+        // Marcar semana actual
+        const today = new Date();
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        const isCurrentWeek = today >= weekStart && today <= weekEnd;
+        
+        weekDiv.innerHTML = `
+            <div class="p-2">
+                <div class="font-bold text-xs ${isCurrentWeek ? 'text-blue-600' : 'text-gray-700'}">
+                    ${weekStart.toLocaleDateString('es-ES', { month: 'short' })}
+                </div>
+                <div class="text-xs text-gray-500">
+                    ${weekStart.getDate()}
+                </div>
+                ${isCurrentWeek ? '<div class="w-2 h-2 bg-blue-500 rounded-full mx-auto mt-1"></div>' : ''}
+            </div>
+        `;
+        
+        dateHeader.appendChild(weekDiv);
+    }
+    
+    // Ajustar ancho del contenedor
+    const totalWidth = 320 + (totalWeeks * weekWidth);
+    document.querySelector('.gantt-container').style.minWidth = `${totalWidth}px`;
+    
+    // Ajustar ancho de todos los timeline containers
+    document.querySelectorAll('.timeline-container').forEach(container => {
+        container.style.width = `${totalWeeks * weekWidth}px`;
+        container.style.minWidth = `${totalWeeks * weekWidth}px`;
+        
+        // Agregar líneas de separación semanal
+        container.style.backgroundImage = `repeating-linear-gradient(
+            to right,
+            transparent 0px,
+            transparent ${weekWidth - 1}px,
+            rgba(0,0,0,0.1) ${weekWidth - 1}px,
+            rgba(0,0,0,0.1) ${weekWidth}px
+        )`;
+    });
+    
+    // Función para detectar superposiciones
+    function periodsOverlap(period1, period2) {
+        return period1.start < period2.end && period2.start < period1.end;
+    }
+    
+    // Posicionar barras según fechas reales (agrupadas por actividad)
+    const activityRows = document.querySelectorAll('.gantt-row');
+    
+    activityRows.forEach(row => {
+        const barsInRow = row.querySelectorAll('.gantt-bar');
+        const activityType = row.querySelector('.timeline-container').dataset.activityType;
+        
+        // Obtener todas las fechas de esta actividad
+        const periods = Array.from(barsInRow).map(bar => ({
+            bar: bar,
+            start: new Date(bar.dataset.start),
+            end: new Date(bar.dataset.end),
+            period: parseInt(bar.dataset.period)
+        })).filter(p => !isNaN(p.start.getTime()) && !isNaN(p.end.getTime()));
+        
+        // Ordenar por fecha de inicio
+        periods.sort((a, b) => a.start - b.start);
+        
+        // Detectar superposiciones y crear capas
+        const layers = [];
+        
+        periods.forEach(period => {
+            let placed = false;
+            
+            // Intentar colocar en una capa existente
+            for (let i = 0; i < layers.length; i++) {
+                let canPlace = true;
+                
+                // Verificar si se superpone con algún período en esta capa
+                for (let existingPeriod of layers[i]) {
+                    if (periodsOverlap(period, existingPeriod)) {
+                        canPlace = false;
+                        break;
+                    }
+                }
+                
+                if (canPlace) {
+                    layers[i].push(period);
+                    period.layer = i;
+                    placed = true;
+                    break;
+                }
+            }
+            
+            // Si no se pudo colocar en ninguna capa, crear una nueva
+            if (!placed) {
+                layers.push([period]);
+                period.layer = layers.length - 1;
+            }
+        });
+        
+        const totalLayers = layers.length;
+        console.log(`Actividad "${periods[0]?.bar.dataset.name}": ${periods.length} períodos en ${totalLayers} capas`);
+        
+        // Calcular dimensiones
+        const containerHeight = 64; // Altura base del contenedor
+        const padding = 4; // Padding total (2px arriba y abajo)
+        const availableHeight = containerHeight - padding;
+        
+        let barHeight, spacing;
+        
+        if (totalLayers === 1) {
+            // Sin superposiciones: usar toda la altura disponible
+            barHeight = availableHeight;
+            spacing = 0;
+        } else {
+            // Con superposiciones: dividir la altura entre las capas
+            spacing = Math.min(2, Math.floor(availableHeight / (totalLayers * 8))); // Máximo 2px de espaciado
+            barHeight = Math.max(12, Math.floor((availableHeight - (spacing * (totalLayers - 1))) / totalLayers));
+        }
+        
+        // Posicionar cada período
+        periods.forEach(period => {
+            const bar = period.bar;
+            
+            // Calcular posición en semanas desde el inicio
+            const startWeekOffset = (period.start - startOfWeek) / (1000 * 60 * 60 * 24 * 7);
+            const endWeekOffset = (period.end - startOfWeek) / (1000 * 60 * 60 * 24 * 7);
+            
+            // Convertir a píxeles
+            const leftPx = Math.max(0, startWeekOffset * weekWidth);
+            const widthPx = Math.max(30, (endWeekOffset - startWeekOffset) * weekWidth);
+            
+            // Calcular posición vertical basada en la capa
+            const topPx = 2 + (period.layer * (barHeight + spacing));
+            
+            // Aplicar estilos
+            bar.style.left = `${leftPx}px`;
+            bar.style.width = `${widthPx}px`;
+            bar.style.height = `${barHeight}px`;
+            bar.style.top = `${topPx}px`;
+            bar.style.position = 'absolute';
+            
+            // Ajustar el texto del nombre de la actividad según el ancho disponible
+            const textSpan = bar.querySelector('span');
+            const activityName = bar.dataset.name;
+            
+            if (widthPx < 80) {
+                textSpan.textContent = activityName.length > 8 ? activityName.substring(0, 8) + '...' : activityName;
+                textSpan.className = 'text-xs font-bold px-1';
+            } else if (widthPx < 150) {
+                textSpan.textContent = activityName.length > 15 ? activityName.substring(0, 15) + '...' : activityName;
+                textSpan.className = 'text-xs px-2';
+            } else if (widthPx < 200) {
+                textSpan.textContent = activityName.length > 20 ? activityName.substring(0, 20) + '...' : activityName;
+                textSpan.className = 'text-sm px-2';
+            } else {
+                textSpan.textContent = activityName;
+                textSpan.className = 'text-sm px-2';
+            }
+            
+            // Ajustar tamaño de fuente según altura de la barra
+            if (barHeight < 20) {
+                textSpan.style.fontSize = '10px';
+                textSpan.style.lineHeight = `${barHeight}px`;
+            } else if (barHeight < 30) {
+                textSpan.style.fontSize = '12px';
+                textSpan.style.lineHeight = `${barHeight}px`;
+            } else {
+                textSpan.style.fontSize = '14px';
+                textSpan.style.lineHeight = `${barHeight}px`;
+            }
+            
+            console.log(`"${bar.dataset.name}" - Período ${period.period} (Capa ${period.layer}):`, {
+                inicio: period.start.toDateString(),
+                fin: period.end.toDateString(),
+                left: `${leftPx}px`,
+                width: `${widthPx}px`,
+                top: `${topPx}px`,
+                height: `${barHeight}px`
+            });
+        });
+        
+        // Ajustar la altura del contenedor si es necesario
+        const requiredHeight = 4 + (totalLayers * barHeight) + ((totalLayers - 1) * spacing);
+        const finalHeight = Math.max(containerHeight, requiredHeight);
+        
+        if (finalHeight > containerHeight) {
+            const container = row.querySelector('.timeline-container');
+            container.style.height = `${finalHeight}px`;
+            row.style.minHeight = `${finalHeight}px`;
+        }
+    });
+    
+    // Tooltips mejorados (sin conflictos de posicionamiento)
+    ganttBars.forEach(bar => {
+        let currentTooltip = null;
+        
+        bar.addEventListener('mouseenter', function(e) {
+            // Remover tooltip previo si existe
+            if (currentTooltip) {
+                currentTooltip.remove();
+                currentTooltip = null;
+            }
+            
+            const tooltip = document.createElement('div');
+            tooltip.className = 'gantt-tooltip fixed z-50 bg-gray-900 text-white text-xs rounded-lg py-2 px-3 pointer-events-none shadow-xl';
+            tooltip.style.maxWidth = '250px';
+            
+            const startDate = new Date(this.dataset.start);
+            const endDate = new Date(this.dataset.end);
+            const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+            const period = this.dataset.period;
+            
+            tooltip.innerHTML = `
+                <div class="font-bold mb-1">${this.dataset.name}</div>
+                <div class="text-yellow-300 mb-1">Período ${period}</div>
+                <div class="mb-1">${startDate.toLocaleDateString('es-ES')} - ${endDate.toLocaleDateString('es-ES')}</div>
+                <div>Duración: ${days} día${days !== 1 ? 's' : ''}</div>
+            `;
+            
+            // Posicionar el tooltip cerca del cursor
+            const rect = this.getBoundingClientRect();
+            const tooltipX = rect.left + (rect.width / 2);
+            const tooltipY = rect.top - 10;
+            
+            tooltip.style.left = `${tooltipX}px`;
+            tooltip.style.top = `${tooltipY}px`;
+            tooltip.style.transform = 'translate(-50%, -100%)';
+            
+            document.body.appendChild(tooltip);
+            currentTooltip = tooltip;
+        });
+        
+        bar.addEventListener('mouseleave', function() {
+            if (currentTooltip) {
+                currentTooltip.remove();
+                currentTooltip = null;
+            }
+        });
+    });
+    
+    // Contar actividades únicas
+    const uniqueActivities = activityRows.length;
+    const totalPeriods = ganttBars.length;
+    
+    // Actualizar información
+    document.getElementById('info-text').textContent = 
+        `${uniqueActivities} actividades • ${totalPeriods} períodos • ${startOfWeek.toLocaleDateString('es-ES')} - ${endOfWeek.toLocaleDateString('es-ES')} • ${totalWeeks} semanas`;
+});
 </script>
+
+<style>
+.gantt-container {
+    font-family: Arial, sans-serif;
+}
+
+.gantt-bar {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    overflow: hidden; /* Evita que el texto se salga */
+}
+
+.gantt-bar:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    z-index: 20;
+    opacity: 1 !important;
+}
+
+.gantt-bar span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    display: block;
+    text-align: center;
+}
+
+.gantt-row:hover {
+    background-color: #f8f9fa;
+}
+
+.gantt-row:hover .gantt-bar {
+    opacity: 1 !important;
+}
+
+.timeline-container {
+    position: relative;
+    border-left: 1px solid #e5e7eb;
+    transition: height 0.3s ease;
+    overflow: visible; /* Permite que los tooltips se muestren */
+}
+
+.week-column {
+    border-left: 1px solid #d1d5db;
+}
+
+/* Tooltip personalizado */
+.gantt-tooltip {
+    z-index: 9999;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+/* Scroll horizontal mejorado */
+.overflow-x-auto::-webkit-scrollbar {
+    height: 8px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Header sticky */
+.gantt-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Animación para filas con múltiples períodos */
+.gantt-row {
+    transition: min-height 0.3s ease;
+}
+</style>
 {% endblock %}
