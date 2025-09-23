@@ -1,8 +1,8 @@
 services:
-  web:
+  frontend:
     build: .
     ports:
-      - "3003:8000"
+      - "3003:3003"
     networks:
       - red_taller_software
 
