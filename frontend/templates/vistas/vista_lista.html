@@ -1,0 +1,40 @@
+{% extends 'base/navbar2.html' %}
+{% block title %}Lista actividades - {{ proyecto.nombre }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col items-center gap-4 py-6">
+    <!-- Título y botón -->
+    <div class="flex flex-row justify-between w-full px-4">
+        <h1 class="text-4xl">Actividades del proyecto: {{ proyecto.nombre }}</h1>
+    </div>
+
+    {% for act in actividades %}
+    <div class="relative w-9/10 rounded-2xl p-4 bg-blue-950 hover:bg-blue-900 text-white shadow">
+        <!-- Contenido clickeable -->
+        <div class="block h-full w-full pr-10">
+            <div class="text-2xl font-semibold">
+                {{ act.nombre }}
+            </div>
+            <div class="mt-2 text-sm text-gray-300 flex flex-wrap gap-4">
+                <p><span class="font-bold">Tipo:</span> {{ act.tipo }}</p>
+                <p><span class="font-bold">Estado:</span> {{ act.estado }}</p>
+                <p><span class="font-bold">Línea:</span> {{ act.linea_trabajo|default:"—" }}</p>
+            </div>
+
+        </div>
+
+        <!-- Dropdown con opciones  de momento ninguna :p-->
+        <details class="absolute top-2 right-2">
+            <summary class="cursor-pointer list-none p-1 rounded hover:bg-gray-300">
+                ⋮
+            </summary>
+            <div class="absolute right-full translate-x-6 rounded-lg border border-gray-700 
+                        shadow-lg bg-red-600 z-10 hover:bg-red-700">
+            </div>
+        </details>
+    </div>
+    {% empty %}
+    <div class="text-gray-500 py-6">No hay actividades registradas.</div>
+    {% endfor %}
+</div>
+{% endblock %}

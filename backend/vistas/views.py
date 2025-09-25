@@ -84,3 +84,40 @@ def vista_gantt(request, proyecto_id):
     }
 
     return render(request, 'vistas/vista_gantt.html', context)
+
+def lista_actividades(request, proyecto_id):
+    proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+
+    # Traer actividades normales
+    actividades_normales = Actividad.objects.filter(linea_trabajo__proyecto=proyecto).select_related('linea_trabajo')
+
+    # Traer actividades de difusión
+    actividades_difusion = ActividadDifusion.objects.filter(proyecto=proyecto)
+
+    # Combinar en una sola lista (más simple que en Gantt, no necesitas procesar fechas)
+    todas_actividades = []
+
+    for a in actividades_normales:
+        todas_actividades.append({
+            'id': a.id,
+            'nombre': a.nombre or f"Actividad {a.id}",
+            'tipo': 'Normal',
+            'estado': a.get_estado_display() if hasattr(a, 'get_estado_display') else 'Sin estado',
+            'linea_trabajo': a.linea_trabajo.nombre if a.linea_trabajo else 'Sin línea',
+        })
+
+    for a in actividades_difusion:
+        todas_actividades.append({
+            'id': a.id,
+            'nombre': a.nombre or f"Actividad Difusión {a.id}",
+            'tipo': 'Difusión',
+            'estado': a.get_estado_display() if hasattr(a, 'get_estado_display') else 'Sin estado',
+            'linea_trabajo': None,
+        })
+
+    context = {
+        'proyecto': proyecto,
+        'actividades': todas_actividades,
+    }
+
+    return render(request, "vistas/vista_lista.html", context)

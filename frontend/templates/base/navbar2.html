@@ -28,6 +28,9 @@
           <a href="{% url 'vista_gantt' proyecto.id %}" class="text-white hover:text-gray-300 {% if request.resolver_match.url_name == 'vista_gantt' %}font-bold border-b-2 border-white{% endif %}">
             Gantt
           </a>
+          <a href="{% url 'lista_actividades' proyecto.id %}" class="text-white hover:text-gray-300 {% if request.resolver_match.url_name == 'lista_actividades' %}font-bold border-b-2 border-white{% endif %}">
+            Lista
+          </a>
             <a href="{% url 'vista_gantt' proyecto.id %}" class="text-white hover:text-gray-300 {% if request.resolver_match.url_name == 'otra_vista' %}font-bold border-b-2 border-white{% endif %}">
                 Otra Vista
             </a>
