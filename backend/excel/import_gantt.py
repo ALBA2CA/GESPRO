@@ -2,7 +2,7 @@ import os
 import django
 import pandas as pd
 import unicodedata
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, time
 from django.db import transaction
 
 # Configurar Django
@@ -42,7 +42,7 @@ def obtener_fechas_reales(date_cols, anio_inicial=None):
     """
     Convierte columnas de fecha en objetos date, corrigiendo año si hay retroceso de mes.
     Cada columna se mantiene como clave única.
-    date_cols: lista de columnas (pueden ser tuplas de MultiIndex o enteros)
+    date_cols: lista de columnas
     """
     fechas_reales = {}
     anio_actual = anio_inicial or datetime.now().year
@@ -105,7 +105,7 @@ def validar_columnas_normales(df):
     info_cols = []
     for col in df.columns:
         if isinstance(col, tuple):
-            if col[1] in ['Linea de trabajo', 'Actividad', 'Responsable(s)', 'Producto Asociado']:
+            if col[1] in ['Linea de trabajo', 'N°', 'Actividad', 'Responsable(s)', 'Producto Asociado']:
                 info_cols.append(col)
     
     if not info_cols:
@@ -171,6 +171,7 @@ def crear_proyecto_con_actividades_normales(nombre_proyecto, df_normales):
     for idx, row in df_normales.iterrows():
         # Línea de trabajo
         linea = row.get(('Unnamed: 0_level_0', 'Linea de trabajo'))
+        n_act = row.get(('Unnamed: 2_level_0', 'N°'))
         producto_nombre = row.get(('Unnamed: 5_level_0', 'Producto Asociado'))
         actividad_nombre = row.get(('Unnamed: 3_level_0', 'Actividad'))
         responsables = row.get(('Unnamed: 4_level_0', 'Responsable(s)'))
@@ -203,7 +204,8 @@ def crear_proyecto_con_actividades_normales(nombre_proyecto, df_normales):
         actividad_obj = Actividad.objects.create(
             linea_trabajo=linea_obj,
             producto_asociado=producto_obj,
-            nombre=actividad_nombre
+            nombre=actividad_nombre,
+            n_act=n_act if pd.notna(n_act) else None
         )
 
         # Fechas de la actividad
@@ -213,21 +215,17 @@ def crear_proyecto_con_actividades_normales(nombre_proyecto, df_normales):
             if fecha_inicio and fecha_fin:
                 Fecha.objects.create(actividad=actividad_obj, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin)
 
-                # Crear las alertas iniciales para la actividad
-                for dias_antes in [3, 7, 14]:
-                    fecha_envio = fecha_fin - timedelta(days=dias_antes)
-                    if fecha_envio >= datetime.now().date():
-                        Alerta.objects.create(
-                            actividad=actividad_obj,
-                            fecha_envio=fecha_envio,
-                            enviado=True
-                        )
-                    else:
-                        Alerta.objects.create(
-                            actividad=actividad_obj,
-                            fecha_envio=fecha_envio,
-                            enviado=False
-                         )
+                # Alertas
+                for dias_antes in [5]:
+                    fecha_envio = datetime.combine(fecha_fin - timedelta(days=dias_antes), time(hour=9, minute=0))
+
+                    enviado = fecha_envio <= datetime.now()
+
+                    Alerta.objects.create(
+                        actividad=actividad_obj,
+                        fecha_envio=fecha_envio,
+                        enviado=enviado
+                    )
 
                 if primera_fecha is None or fecha_inicio < primera_fecha:
                     primera_fecha = fecha_inicio
@@ -276,6 +274,7 @@ def crear_actividades_difusion(proyecto, df_difusion, date_cols, fechas_reales):
     Crea actividades de difusión reutilizando date_cols y fechas_reales de actividades normales.
     """
 
+    COL_N_ACT = 'N°'
     COL_ACTIVIDAD = 'Actividad de Difusión'
     COL_RESPONSABLE = 'Responsable de la Actividad de Difusión'
     COL_PRODUCTO = 'Producto(s) Asociado(s)'
@@ -285,7 +284,7 @@ def crear_actividades_difusion(proyecto, df_difusion, date_cols, fechas_reales):
     # Mapear columnas de fechas de normales a difusión
     n_fechas = len(date_cols)
     df_fechas_difusion = df_difusion.iloc[:, -n_fechas:].copy()
-    df_fechas_difusion.columns = date_cols  # Reutilizamos columnas de normales
+    df_fechas_difusion.columns = date_cols
 
     for idx, row in df_difusion.iterrows():
         actividad_nombre = row.get(COL_ACTIVIDAD)
@@ -294,7 +293,8 @@ def crear_actividades_difusion(proyecto, df_difusion, date_cols, fechas_reales):
 
         actividad_obj = ActividadDifusion.objects.create(
             nombre=str(actividad_nombre).strip(),
-            proyecto=proyecto
+            proyecto=proyecto,
+            n_act=row.get(COL_N_ACT) if pd.notna(row.get(COL_N_ACT)) else None
         )
 
         # Productos asociados
@@ -333,21 +333,17 @@ def crear_actividades_difusion(proyecto, df_difusion, date_cols, fechas_reales):
                     fecha_fin=fecha_fin
                 )
                 
-                # Crear las alertas iniciales para la actividad de difusión
-                for dias_antes in [3, 7, 14]:
-                    fecha_envio = fecha_fin - timedelta(days=dias_antes)
-                    if fecha_envio >= datetime.now().date():
-                        Alerta.objects.create(
-                            actividad=actividad_obj,
-                            fecha_envio=fecha_envio,
-                            enviado=True
-                        )
-                    else:
-                        Alerta.objects.create(
-                            actividad=actividad_obj,
-                            fecha_envio=fecha_envio,
-                            enviado=False
-                         )
+                # Alertas
+                for dias_antes in [5]:
+                    fecha_envio = datetime.combine(fecha_fin - timedelta(days=dias_antes), time(hour=9, minute=0))
+
+                    enviado = fecha_envio <= datetime.now()
+
+                    Alerta.objects.create(
+                        actividad=actividad_obj,
+                        fecha_envio=fecha_envio,
+                        enviado=enviado
+                    )
 
 
                 if fecha_inicio is not None:
@@ -379,8 +375,8 @@ def crear_actividades_difusion(proyecto, df_difusion, date_cols, fechas_reales):
                 if not encargado_obj:
                     encargado_obj = Encargado.objects.create(nombre=nombre, correo_electronico=correo)
 
-                ActividadDifusion_Encargado.objects.get_or_create(
-                    actividad=actividad_obj,
+                Actividad_Encargado.objects.get_or_create(
+                    actividad=actividad_obj,  # ahora apunta a ActividadBase
                     encargado=encargado_obj
                 )
     proyecto.save()

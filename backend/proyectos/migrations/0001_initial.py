@@ -65,6 +65,9 @@ class Migration(migrations.Migration):
                 ('enviado', models.BooleanField(default=True)),
                 ('actividad', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='alertas', to='proyectos.actividadbase')),
             ],
+            options={
+                'ordering': ['fecha_envio'],
+            },
         ),
         migrations.CreateModel(
             name='Actividad_Encargado',

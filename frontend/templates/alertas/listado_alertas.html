@@ -1,0 +1,102 @@
+{% extends 'base/navbar1.html' %}
+{% load static tailwind_tags %}
+
+{% block content %}
+<div class="container mx-auto mt-6">
+    <h2 class="text-2xl font-bold mb-4">Alertas por Actividad</h2>
+
+    {% if actividades %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 shadow-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <!-- Checkbox seleccionar todo -->
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <input type="checkbox" id="select-all" class="form-checkbox h-4 w-4">
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actividad</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsables</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha límite</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alertas</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for actividad in actividades %}
+                        <tr class="hover:bg-gray-50 {% if actividad.estado == 'TER' %}bg-green-50{% elif actividad.estado == 'EPR' %}bg-yellow-50{% endif %}">
+                            <!-- Checkbox individual -->
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <input type="checkbox" class="row-checkbox form-checkbox h-4 w-4">
+                            </td>
+
+                            <!-- Nombre -->
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ actividad.nombre }}</td>
+
+                            <!-- Responsables -->
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {% if actividad.actividad_encargados.all %}
+                                    {% for ae in actividad.actividad_encargados.all %}
+                                        {{ ae.encargado.nombre }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-gray-400">Sin responsables</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Fecha límite -->
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {% if actividad.fecha_limite %}
+                                    {{ actividad.fecha_limite|date:"d/m/Y" }}
+                                {% else %}
+                                    <span class="text-gray-400">No definida</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Alertas -->
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <div class="flex items-center gap-2">
+                                    {% if actividad.alertas.all %}
+                                        <div class="max-w-2xl overflow-x-auto">
+                                            <div class="flex gap-2 min-w-max">
+                                                {% for alerta in actividad.alertas.all %}
+                                                    <span class="flex-shrink-0 px-2 py-1 inline-flex flex-col items-center text-sm leading-5 font-semibold rounded-full
+                                                                {% if alerta.enviado %}bg-green-700 text-white{% else %}bg-yellow-700 text-white{% endif %}">
+                                                        <span class="text-xs">{{ alerta.fecha_envio|date:"H:i" }}</span>
+                                                        <span class="text-sm">{{ alerta.fecha_envio|date:"d/m/Y" }}</span>
+                                                    </span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-gray-400">Sin alertas</span>
+                                    {% endif %}
+
+                                    <!-- Boton agregar alerta -->
+                                    <button type="button"
+                                            class="flex-shrink-0 bg-blue-950 hover:bg-blue-600 text-white font-bold px-2 py-1 rounded-full text-sm">
+                                        +
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="bg-blue-100 text-blue-800 px-4 py-3 rounded">
+            No hay actividades con alertas registradas.
+        </div>
+    {% endif %}
+</div>
+
+<!-- Script para seleccionar/deseleccionar todo -->
+<script>
+    const selectAll = document.getElementById('select-all');
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+
+    selectAll.addEventListener('change', function() {
+        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    });
+</script>
+
+{% endblock %}
