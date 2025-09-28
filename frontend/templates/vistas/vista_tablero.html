@@ -1,0 +1,78 @@
+{% extends 'base/navbar2.html' %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-4">
+    <input type="text" placeholder="Buscar..." class="px-3 py-1 border rounded-md border-gray-300 w-56 focus:outline-none focus:ring-2 focus:ring-blue-500">
+</div>
+
+<div class="flex gap-6 h-[calc(100vh-200px)]">
+    {% for estado, nombre_estado in estados %}
+    <div id="estado-{{ estado }}" class="flex-1 bg-gray-100 rounded-md p-4 flex flex-col border-2 border-blue-950">
+        <h3 class="text-center font-semibold mb-3">{{ nombre_estado }}</h3>
+        <div class="actividad-lista flex-1 flex flex-col overflow-y-auto max-h-[calc(100vh-200px)]">
+            {% for actividad in actividades %}
+            {% if actividad.estado == estado %}
+            <div class="actividad-card bg-white p-4 mb-3 rounded-xl border-2 border-blue-500 flex flex-col justify-start"
+                 data-id="{{ actividad.id }}">
+                <strong class="text-gray-800">{{ actividad.nombre }}</strong>
+                {% if actividad.linea_trabajo %}
+                <small class="text-gray-500">Línea: {{ actividad.linea_trabajo.nombre }}</small>
+                {% endif %}
+                {% if actividad.producto_asociado %}
+                <small class="text-gray-500">Producto: {{ actividad.producto_asociado.nombre }}</small>
+                {% endif %}
+                <small class="text-gray-400">{{ actividad.tipo }}</small>
+            </div>
+            {% endif %}
+            {% endfor %}
+
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+/* Fantasma solo con borde, sin contenido */
+.ghost-placeholder {
+    border: 2px dashed #3b82f6; /* border-blue-500 */
+    background-color: transparent;
+    border-radius: 0.75rem; /* rounded-xl */
+    height: 60px; /* altura aproximada de una tarjeta */
+    margin-bottom: 0.75rem; /* mb-3 */
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.actividad-lista').forEach(lista => {
+        new Sortable(lista, {
+            group: 'actividades',
+            animation: 150,
+            ghostClass: 'ghost-placeholder',
+            dragClass: 'opacity-80',
+            // quitamos swap
+            onStart: function(evt) {
+                evt.item.dataset.originalContent = evt.item.innerHTML;
+                evt.item.innerHTML = '';
+            },
+            onEnd: function(evt) {
+                evt.item.innerHTML = evt.item.dataset.originalContent;
+                const actividadId = evt.item.dataset.id;
+                const nuevoEstado = evt.to.closest('[id^="estado-"]').id.replace('estado-', '');
+                
+                // AJAX a Django
+                fetch("{% url 'actualizar_estado' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "X-CSRFToken": "{{ csrf_token }}"
+                    },
+                    body: `actividad_id=${actividadId}&nuevo_estado=${nuevoEstado}`
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

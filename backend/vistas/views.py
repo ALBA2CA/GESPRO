@@ -1,5 +1,7 @@
 from django.shortcuts import render, get_object_or_404
-from proyectos.models import Proyecto, Actividad, ActividadDifusion
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from proyectos.models import Proyecto, Actividad, ActividadDifusion, ActividadBase
 from datetime import datetime, timedelta
 
 def vista_gantt(request, proyecto_id):
@@ -121,3 +123,40 @@ def lista_actividades(request, proyecto_id):
     }
 
     return render(request, "vistas/vista_lista.html", context)
+
+
+def vista_tablero(request, proyecto_id):
+    proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+
+    actividades_normales = Actividad.objects.filter(linea_trabajo__proyecto=proyecto).select_related('linea_trabajo')
+    actividades_difusion = ActividadDifusion.objects.filter(proyecto=proyecto)
+
+    todas_actividades = list(actividades_normales) + list(actividades_difusion)
+
+    estados = [
+        ('PEN', 'Pendiente'),
+        ('LPC', 'Listo para comenzar'),
+        ('EPR', 'En progreso'),
+        ('COM', 'Completada'),
+        ('TER', 'Terminada'),
+    ]
+
+    return render(request, 'vistas/vista_tablero.html', {
+        'proyecto': proyecto,
+        'actividades': todas_actividades,
+        'estados': estados,
+    })
+
+
+@csrf_exempt
+def actualizar_estado(request):
+    if request.method == 'POST':
+        actividad_id = request.POST.get('actividad_id')
+        nuevo_estado = request.POST.get('nuevo_estado')
+        try:
+            actividad = Actividad.objects.get(id=actividad_id)
+            actividad.estado = nuevo_estado
+            actividad.save()
+            return JsonResponse({'success': True})
+        except Actividad.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Actividad no encontrada'})
