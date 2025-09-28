@@ -2,6 +2,32 @@
 {% block title %}Lista actividades - {{ proyecto.nombre }}{% endblock %}
 
 {% block content %}
+
+<!-- Mensaje exito o error -->
+<div class="mt-3 space-y-2 w-9/10">
+    {% for message in messages %}   
+    <script>
+        setTimeout(() => {
+        const mensajes = document.querySelectorAll('.mt-3 .px-4');
+        mensajes.forEach(m => m.remove());
+        }, 10000); // desaparece después de 10s
+    </script>
+        <div class="
+            px-4 py-2 rounded-lg text-sm font-medium 
+            {% if message.tags == 'success' %}
+                bg-green-100 text-green-700 border border-green-300
+            {% elif message.tags == 'error' %}
+                bg-red-100 text-red-700 border border-red-300
+            {% elif message.tags == 'warning' %}
+                bg-yellow-100 text-yellow-800 border border-yellow-300
+            {% else %}
+                bg-gray-100 text-gray-700 border border-gray-300
+            {% endif %}
+        ">
+            {{ message }}
+        </div>
+    {% endfor %}
+</div>
 <div class="flex flex-col items-center gap-4 py-6">
     <!-- Título -->
     <div class="flex flex-row justify-between w-full px-4">
@@ -12,25 +38,32 @@
     <div class="relative w-9/10 p-4 bg-transparent text-black border-b border-gray-500">
         <!-- Contenido -->
         <div class="flex justify-between items-center">
-            <!-- Nombre a la izquierda -->
             <div class="text-2l font-semibold">
                 {{ act.nombre }}
             </div>
 
-            <!-- Estado a la derecha como dropdown -->
             <div>
-                <select class="border border-gray-500 rounded-lg px-4 py-2 text-base font-medium">
-                    <option {% if act.estado == "Pendiente" %}selected{% endif %}>Pendiente</option>
-                    <option {% if act.estado == "En progreso" %}selected{% endif %}>En progreso</option>
-                    <option {% if act.estado == "Finalizado" %}selected{% endif %}>Finalizado</option>
-                </select>
+                <form method="POST" action="{% url 'actualizar_estado_actividad' act.id %}">
+                    {% csrf_token %}
+                    <select 
+                        name="estado" 
+                        class="border border-gray-600  text-sm rounded p-1"
+                        data-actividad-id="{{ act.id }}">
+                        {% for value, label in estado_choices %}
+                            <option value="{{ value }}" {% if value == act.estado_valor %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="ml-2 bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm">Actualizar</button>
+                </form>
             </div>
         </div>
 
         <!-- Datos adicionales debajo -->
         <div class="mt-3 text-sm flex gap-6">
             <p><span class="font-bold">Tipo:</span> {{ act.tipo }}</p>
-            <p><span class="font-bold">Encargado:</span> {{ act.encargado }}</p>
+            <p><span class="font-bold">Encargados:</span> {{ act.encargados |join:", " }}</p>
             <p><span class="font-bold">Línea:</span> {{ act.linea_trabajo|default:"—" }}</p>
         </div>
     </div>
@@ -38,4 +71,32 @@
     <div class="text-gray-500 py-6">No hay actividades registradas.</div>
     {% endfor %}
 </div>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll("form").forEach(form => {
+        const select = form.querySelector("select[name='estado']");
+        const button = form.querySelector("button[type='submit']");
+        
+        // Guardamos el valor inicial
+        const valorInicial = select.value;
+        
+        // Inicialmente bloqueamos el botón
+        button.disabled = true;
+        button.classList.add("opacity-50", "cursor-not-allowed");
+        
+        select.addEventListener("change", function() {
+            if (select.value === valorInicial) {
+                // Sin cambios
+                button.disabled = true;
+                button.classList.add("opacity-50", "cursor-not-allowed");
+            } else {
+                // Habilitado
+                button.disabled = false;
+                button.classList.remove("opacity-50", "cursor-not-allowed");
+            }
+        });
+    });
+});
+</script>
+
 {% endblock %}
