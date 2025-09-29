@@ -62,6 +62,12 @@ class ActividadBase(models.Model):
     class Meta:
         abstract = False
 
+    def tipo(self):
+        if isinstance(self, ActividadDifusion):
+            return "Difusión"
+        else:
+            return "Normal"
+
     def __str__(self):
         return self.nombre
 

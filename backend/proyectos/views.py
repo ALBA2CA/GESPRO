@@ -23,3 +23,5 @@ def eliminar_proyecto(request):
             print(f'No se encontró el proyecto con ID {proyecto_id}.')
     return proyectos(request)
     
+def home(request):
+    return redirect('proyectos')  # Redirige a la vista de proyectos

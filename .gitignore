@@ -1,6 +1,6 @@
 #ignorar archivos compilados de python
 __pycache__/
-*.pycbackend/databases/db.sqlite3
+*.pyc
 gespro-env/
 
 databases/*.sqlite3

@@ -20,12 +20,15 @@ from django.urls import path, include, reverse_lazy
 from django.views.generic import RedirectView
 from proyectos import views
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('proyectos/',include('proyectos.urls')),
     path('excel/',include('excel.urls')),
     path('alertas/',include('alertas.urls')),
     path('', RedirectView.as_view(url=reverse_lazy('proyectos'))),
+    path('vistas/', include('vistas.urls')),
+    path('',views.home, name = 'home')
     
 ]
 
