@@ -9,5 +9,5 @@ class UploadExcelForm(forms.Form):
     )
     archivo = forms.FileField(
         label='Archivo Excel',
-        widget=forms.FileInput(attrs={'class': 'form-control'})
+        widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.xlsx,.xls'})
     )
