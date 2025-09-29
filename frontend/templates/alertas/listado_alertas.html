@@ -1,4 +1,6 @@
 {% extends 'base/navbar2.html' %}
+{% block title %}Alertas - {{ proyecto.nombre }}{% endblock %}
+
 {% load static tailwind_tags %}
 
 {% block content %}
@@ -22,7 +24,7 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     {% for actividad in actividades %}
-                        <tr class="hover:bg-gray-50 {% if actividad.estado == 'TER' %}bg-green-50{% elif actividad.estado == 'EPR' %}bg-yellow-50{% endif %}">
+                        <tr class="hover:bg-gray-50">
                             <!-- Checkbox individual -->
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                 <input type="checkbox" class="row-checkbox form-checkbox h-4 w-4">

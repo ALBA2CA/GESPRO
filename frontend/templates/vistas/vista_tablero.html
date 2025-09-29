@@ -1,4 +1,6 @@
 {% extends 'base/navbar2.html' %}
+{% block title %}Lista tablero - {{ proyecto.nombre }}{% endblock %}
+
 
 {% block content %}
 <div class="flex gap-6 h-[calc(100vh-200px)]">
@@ -29,7 +31,7 @@
                         <strong class="text-gray-800">{{ actividad.nombre }}</strong>
                         {% if actividad.linea_trabajo %}
                             <small class="text-gray-500">Línea: 
-                                {% if act.tipo == "Difusión" %}
+                                {% if actividad.tipo == "Difusión" %}
                                     {{ actividad.linea_trabajo|join:"-" }}
                                 {% else %} 
                                     {{ actividad.linea_trabajo }}

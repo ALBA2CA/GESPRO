@@ -30,6 +30,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '146.83.216.166', 'gespro.inf.uach.cl']
 
+CSRF_TRUSTED_ORIGINS = ['https://gespro.inf.uach.cl']
 
 # Application definition
 
