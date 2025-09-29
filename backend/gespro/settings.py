@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'theme',
     'proyectos',
-    'alertas',
+    'alertas.apps.AlertasConfig',
     'vistas',
 ]
 
