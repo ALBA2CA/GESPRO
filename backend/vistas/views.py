@@ -164,30 +164,3 @@ def actualizar_estado(request):
     
 
 
-# def actualizar_estado_actividad(request, actividad_id):
-#     actividad = Actividad.objects.filter(id=actividad_id).first()
-    
-#     if not actividad:
-#         actividad = get_object_or_404(ActividadDifusion, id=actividad_id)
-
-#     if request.method == 'POST':
-#         nuevo_estado = request.POST.get('estado')
-
-#         if nuevo_estado in dict(EstadoActividad.choices):
-#             actividad.estado = nuevo_estado
-#             actividad.save()
-
-#             messages.success(request, f"Estado de '{actividad.nombre}' actualizado correctamente.")
-
-#             if isinstance(actividad, Actividad):
-#                 return redirect('lista_actividades', proyecto_id=actividad.linea_trabajo.proyecto.id)
-#             elif isinstance(actividad, ActividadDifusion):
-#                 return redirect('lista_actividades_difusion', proyecto_id=actividad.proyecto.id)
-
-#     if isinstance(actividad, Actividad):
-#         return redirect('lista_actividades', proyecto_id=actividad.linea_trabajo.proyecto.id)
-#     else:
-#         return redirect('lista_actividades_difusion', proyecto_id=actividad.proyecto.id)
-
-# def actulizar_estado_actividad(request, actividad_id): con ActividadBase
-
