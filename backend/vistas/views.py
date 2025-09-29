@@ -1,8 +1,13 @@
-from django.shortcuts import render, get_object_or_404
+
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from proyectos.models import Proyecto, Actividad, ActividadDifusion, ActividadBase
+from proyectos.models import Proyecto, Actividad, ActividadDifusion
 from datetime import datetime, timedelta
+from django.contrib import messages
+
+
+
 
 def vista_gantt(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
@@ -87,42 +92,50 @@ def vista_gantt(request, proyecto_id):
 
     return render(request, 'vistas/vista_gantt.html', context)
 
+
 def lista_actividades(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+    actividades_normales = Actividad.objects.filter(
+        linea_trabajo__proyecto=proyecto
+    ).select_related('linea_trabajo').prefetch_related('actividad_encargados__encargado')
 
-    # Traer actividades normales
-    actividades_normales = Actividad.objects.filter(linea_trabajo__proyecto=proyecto).select_related('linea_trabajo')
+    actividades_difusion = ActividadDifusion.objects.filter(
+        proyecto=proyecto
+    ).prefetch_related('actividad_difusion_encargados__encargado')
 
-    # Traer actividades de difusión
-    actividades_difusion = ActividadDifusion.objects.filter(proyecto=proyecto)
-
-    # Combinar en una sola lista (más simple que en Gantt, no necesitas procesar fechas)
     todas_actividades = []
-
     for a in actividades_normales:
+        encargados = [ae.encargado.nombre for ae in a.actividad_encargados.all()]
         todas_actividades.append({
             'id': a.id,
             'nombre': a.nombre or f"Actividad {a.id}",
             'tipo': 'Normal',
-            'estado': a.get_estado_display() if hasattr(a, 'get_estado_display') else 'Sin estado',
+            'estado': a.get_estado_display(),
+            'estado_valor': a.estado,
             'linea_trabajo': a.linea_trabajo.nombre if a.linea_trabajo else 'Sin línea',
+            'encargados': encargados if encargados else ["No asignado"],
         })
 
     for a in actividades_difusion:
+        encargados = [ade.encargado.nombre for ade in a.actividad_difusion_encargados.all()]
         todas_actividades.append({
             'id': a.id,
             'nombre': a.nombre or f"Actividad Difusión {a.id}",
             'tipo': 'Difusión',
-            'estado': a.get_estado_display() if hasattr(a, 'get_estado_display') else 'Sin estado',
+            'estado': a.get_estado_display(),
+            'estado_valor': a.estado,
             'linea_trabajo': None,
+            'encargados': encargados if encargados else ["No asignado"],
         })
 
     context = {
         'proyecto': proyecto,
         'actividades': todas_actividades,
+        'estado_choices': Actividad._meta.get_field('estado').choices,  
     }
-
     return render(request, "vistas/vista_lista.html", context)
+
+
 
 
 def vista_tablero(request, proyecto_id):
@@ -160,3 +173,33 @@ def actualizar_estado(request):
             return JsonResponse({'success': True})
         except Actividad.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Actividad no encontrada'})
+
+def actualizar_estado_actividad(request, actividad_id):
+    # Intentar primero como Actividad normal
+    actividad = Actividad.objects.filter(id=actividad_id).first()
+    
+    if not actividad:
+        # Intentar como ActividadDifusion
+        actividad = get_object_or_404(ActividadDifusion, id=actividad_id)
+
+    if request.method == 'POST':
+        nuevo_estado = request.POST.get('estado')
+
+        if nuevo_estado in dict(EstadoActividad.choices):
+            actividad.estado = nuevo_estado
+            actividad.save()
+
+            # Mensaje de éxito
+            messages.success(request, f"Estado de '{actividad.nombre}' actualizado correctamente.")
+
+            # Redirigir según tipo
+            if isinstance(actividad, Actividad):
+                return redirect('lista_actividades', proyecto_id=actividad.linea_trabajo.proyecto.id)
+            elif isinstance(actividad, ActividadDifusion):
+                return redirect('lista_actividades_difusion', proyecto_id=actividad.proyecto.id)
+
+    # Por si entra por GET accidentalmente
+    if isinstance(actividad, Actividad):
+        return redirect('lista_actividades', proyecto_id=actividad.linea_trabajo.proyecto.id)
+    else:
+        return redirect('lista_actividades_difusion', proyecto_id=actividad.proyecto.id)
