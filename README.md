@@ -99,7 +99,7 @@ Asegúrate de estar en el directorio **raíz** del proyecto antes de comenzar.
     * **Encender Trabajadores de Tareas Calendarizadas (Django-Q):** Este servicio maneja las tareas asíncronas y programadas.
 
         ```bash
-        python manage.py djangoQ cluster
+        python manage.py qcluster
         ```
 
     * **Correr el Servidor Web:** Inicia la aplicación principal.
