@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -38,10 +40,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_q',
     'tailwind',
-    'widget_tweaks',   # 👈 agrégalo aquí
+    'widget_tweaks',
     'theme',
     'proyectos',
+    'alertas',
 ]
 
 MIDDLEWARE = [
@@ -147,3 +151,26 @@ if DEBUG:
     MIDDLEWARE += [
         "django_browser_reload.middleware.BrowserReloadMiddleware",
     ]
+
+
+Q_CLUSTER = {
+    "name": "DjangoQ",
+    "workers": 4,        
+    "recycle": 500,
+    "timeout": 60,
+    "retry": 120,
+    "queue_limit": 50,
+    "bulk": 10,
+    "orm": "default",
+}
+
+load_dotenv()
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv("SMTP_SERVER")
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv("EMAIL")
+EMAIL_HOST_PASSWORD = os.getenv("PASSWORD_APP")
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+

@@ -13,6 +13,7 @@ class Proyecto(models.Model):
     def __str__(self):
         return self.nombre
     
+
 class LineaTrabajo(models.Model):
     id = models.AutoField(primary_key=True)
     proyecto = models.ForeignKey(Proyecto, related_name='lineas_trabajo', on_delete=models.CASCADE)
@@ -22,6 +23,7 @@ class LineaTrabajo(models.Model):
     estado = models.BooleanField(default=True)
     def __str__(self):
         return self.nombre
+    
     
 class ProductoAsociado(models.Model):
     id = models.AutoField(primary_key=True)
@@ -48,6 +50,7 @@ class EstadoActividad(models.TextChoices):
 class ActividadBase(models.Model):
     id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=200)
+    n_act = models.IntegerField(null=True, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     ultima_modificacion = models.DateTimeField(auto_now=True)
     estado = models.CharField(
@@ -56,12 +59,12 @@ class ActividadBase(models.Model):
         default=EstadoActividad.PENDIENTE
     )
 
-
     class Meta:
-        abstract = False  # multi-table, crea tabla base
+        abstract = False
 
     def __str__(self):
         return self.nombre
+
 
 # Actividades normales
 class Actividad(ActividadBase):
@@ -89,7 +92,21 @@ class Fecha(models.Model):
     def __str__(self):
         return f"{self.actividad.nombre}: {self.fecha_inicio} - {self.fecha_fin}"
 
-    
+
+class Alerta(models.Model):
+    id = models.AutoField(primary_key=True)
+    actividad = models.ForeignKey(ActividadBase, related_name='alertas', on_delete=models.CASCADE)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_envio = models.DateTimeField(db_index=True)
+    enviado = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["fecha_envio"]
+
+    def __str__(self):
+        return f"Alerta para {self.actividad.nombre}: {self.fecha_envio}"
+
+
 class Encargado(models.Model):
     id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100)
@@ -101,10 +118,18 @@ class Encargado(models.Model):
     def __str__(self):
         return self.nombre
     
+
 class Actividad_Encargado(models.Model):
-    id = models.AutoField(primary_key=True)
-    actividad = models.ForeignKey(ActividadBase, related_name='actividad_encargados', on_delete=models.CASCADE)
-    encargado = models.ForeignKey(Encargado, related_name='actividad_encargados', on_delete=models.CASCADE)
+    actividad = models.ForeignKey(
+        ActividadBase,
+        related_name='actividad_encargados',
+        on_delete=models.CASCADE
+    )
+    encargado = models.ForeignKey(
+        Encargado,
+        related_name='actividad_encargados',
+        on_delete=models.CASCADE
+    )
     fecha_asignacion = models.DateTimeField(auto_now_add=True)
     ultima_modificacion = models.DateTimeField(auto_now=True)
     estado = models.BooleanField(default=True)
@@ -133,10 +158,5 @@ class ActividadDifusion_Linea(models.Model):
     def __str__(self):
         return f"{self.actividad.nombre} - {self.linea_trabajo.nombre}"
     
-class ActividadDifusion_Encargado(models.Model):
-    actividad = models.ForeignKey(ActividadDifusion, related_name='actividad_difusion_encargados', on_delete=models.CASCADE)
-    encargado = models.ForeignKey(Encargado, related_name='actividad_difusion_encargados', on_delete=models.CASCADE)
 
-    def __str__(self):
-        return f"{self.actividad.nombre} - {self.encargado.nombre}"
 

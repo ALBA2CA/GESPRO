@@ -13,7 +13,7 @@
     {% for proyecto in proyectos %}
     <div class="relative w-9/10 rounded-2xl p-4 bg-blue-950 hover:bg-blue-900 text-white shadow">
         
-        <a href="{% url 'proyectos' %}" class="block h-full w-full pr-10"> 
+        <a href="{% url 'listado_alertas' proyecto.id %}" class="block h-full w-full pr-10"> 
             <div class="text-2xl font-semibold">
                 {{ proyecto.nombre }}
             </div>

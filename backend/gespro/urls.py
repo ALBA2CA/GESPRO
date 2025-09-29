@@ -24,7 +24,11 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('proyectos/',include('proyectos.urls')),
     path('excel/',include('excel.urls')),
+<<<<<<< HEAD
     path('', RedirectView.as_view(url=reverse_lazy('proyectos'))), 
+=======
+    path('alertas/',include('alertas.urls')),
+>>>>>>> h10
     
 ]
 

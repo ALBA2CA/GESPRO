@@ -27,9 +27,6 @@ def verificar_proyecto(request):
                 info_proyecto = informacion_proyecto(df_normales, df_difusion)
                 info_proyecto['Nombre_del_Proyecto'] = nombre_proyecto
                 return render(request, 'excel/importar_proyecto.html', {'info_proyecto': info_proyecto, 'form': form, 'archivo': ruta_tmp, 'mostrar_modal': True})
-            # Agregar solo si se usa unique=True en el modelo para el nombre del proyecto
-            # except IntegrityError:
-            #     messages.error(request, f"Ya existe un proyecto con el nombre '{nombre_proyecto}'")
 
             except FormatoInvalidoError as e:
                 messages.error(request, f"Error de formato: {e}")
