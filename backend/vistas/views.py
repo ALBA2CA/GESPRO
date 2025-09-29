@@ -5,6 +5,7 @@ from proyectos.models import Proyecto, Actividad, ActividadDifusion, ActividadBa
 from datetime import datetime, timedelta
 from django.contrib import messages
 from django.db import models
+from .gantt import calcular_gantt_data
 
 
 
