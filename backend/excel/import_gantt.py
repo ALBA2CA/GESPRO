@@ -85,7 +85,7 @@ def separar_tablas_excel(archivo, multiindex=True):
             difusion_idx = idx
             break
     if difusion_idx is None:
-        raise ValueError("No se encontró la sección Difusión en el Excel.")
+        raise FormatoInvalidoError("No se encontró la sección Difusión en el Excel.")
 
     # Tabla normales
     df_normales = df.iloc[:difusion_idx].copy().reset_index(drop=True)

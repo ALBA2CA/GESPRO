@@ -2,70 +2,231 @@
 {% block title %}Vista Gantt - {{ proyecto.nombre }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6">
-    <div class="bg-white rounded-lg shadow-lg p-6">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">Vista Gantt - {{ proyecto.nombre }}</h2>
-        
+<div class="container mx-auto px-2 py-1">
+    <div class="bg-white rounded-lg shadow-lg p-2">
         <!-- Gantt con columnas semanales -->
-        <div class="overflow-x-auto border rounded-lg">
-            <div class="gantt-container" style="min-width: 2000px;">
+        <div id="gantt-semanal" class="gantt-wrapper border rounded-lg">
+            <div class="gantt-container" style="min-width: {{ gantt_data.total_width }}px;">
                 <!-- Header con fechas semanales -->
-                <div class="gantt-header flex bg-gray-100 border-b-2 border-gray-300 sticky top-0 z-10">
-                    <div class="w-80 p-3 font-bold text-gray-700 border-r border-gray-300 bg-gray-100">
+                <div class="gantt-header flex bg-gray-100 border-b-2 border-gray-300">
+                    <div class="activity-header w-80 font-bold text-gray-700 border-r border-gray-300 bg-gray-100">
                         Actividad
                     </div>
-                    <div class="flex" id="date-header">
-                        <!-- Fechas semanales se generarán aquí -->
+                    <div class="flex">
+                        {% for columna in gantt_data.columnas_semanales %}
+                            <div class="week-column text-center border-r border-gray-300 bg-gray-100" 
+                                style="width: {{ gantt_data.week_width }}px; min-width: {{ gantt_data.week_width }}px; max-width: {{ gantt_data.week_width }}px; flex: none; box-sizing: border-box;">
+                                <div class="p-1">
+                                    <div class="font-bold text-xs {% if columna.is_current_week %}text-blue-600{% else %}text-gray-700{% endif %}">
+                                        {{ columna.month_name }}
+                                    </div>
+                                    <div class="text-xs text-gray-500">
+                                        {{ columna.day_number }}
+                                    </div>
+                                    {% if columna.is_current_week %}
+                                        <div class="w-2 h-2 bg-blue-500 rounded-full mx-auto mt-1"></div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
                     </div>
                 </div>
                 
                 <!-- Filas de actividades agrupadas -->
                 <div class="gantt-rows">
                     {% for actividad in total_actividades %}
-                        <div class="gantt-row flex border-b border-gray-200 hover:bg-gray-50" data-activity-id="{{ actividad.id }}">
-                            <!-- Información de la actividad -->
-                            <div class="w-80 p-3 border-r border-gray-300 bg-white">
-                                <div class="font-medium text-gray-800">{{ actividad.nombre }}</div>
-                                <div class="text-xs text-gray-500 mt-1">
-                                    <!-- Mostrar rango completo de fechas -->
-                                    {% if actividad.fechas %}
-                                        {% with actividad.fechas|first as primera_fecha %}
-                                        {% with actividad.fechas|last as ultima_fecha %}
-                                            {{ primera_fecha.fecha_inicio }} - {{ ultima_fecha.fecha_fin }}
-                                        {% endwith %}
-                                        {% endwith %}
+                        <!-- Separador de línea de trabajo -->
+                        {% if actividad.mostrar_separador %}
+                            <div class="work-line-separator flex bg-gradient-to-r from-gray-100 to-gray-50 border-b border-gray-300">
+                                <div class="work-line-label px-3 py-2 w-80 font-semibold text-sm text-gray-700 flex items-center bg-gradient-to-r from-gray-100 to-gray-50">
+                                    {% if actividad.tipo == 'Normal' %}
+                                        <span class="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                                    {% else %}
+                                        <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
                                     {% endif %}
+                                    {{ actividad.linea_trabajo|default:"Sin línea de trabajo" }}
                                 </div>
-                                <div class="text-xs mt-1">
+                                <div class="work-line-fill flex-1 bg-gradient-to-r from-gray-100 to-gray-50"></div>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="gantt-row flex border-b border-gray-200 hover:bg-gray-50" data-activity-id="{{ actividad.id }}" data-linea-trabajo="{{ actividad.linea_trabajo|default:'sin-linea' }}">
+                            <!-- Información de la actividad -->
+                            <div class="activity-info w-80 p-2 border-r border-gray-300 bg-white">
+                                <div class="font-medium text-gray-800">{{ actividad.nombre }}</div>
+                                <div class="text-xs text-gray-500 mt-1 flex items-center flex-wrap gap-2">
+                                    <!-- Mostrar rango completo de fechas -->
+                                    <span>
+                                        {% if actividad.fechas %}
+                                            {% with actividad.fechas|first as primera_fecha %}
+                                            {% with actividad.fechas|last as ultima_fecha %}
+                                                {{ primera_fecha.fecha_inicio }} - {{ ultima_fecha.fecha_fin }}
+                                            {% endwith %}
+                                            {% endwith %}
+                                        {% endif %}
+                                    </span>
                                     <span class="px-2 py-1 rounded text-xs {% if actividad.tipo == 'Normal' %}bg-blue-100 text-blue-800{% else %}bg-green-100 text-green-800{% endif %}">
                                         {{ actividad.tipo }}
                                     </span>
                                     {% if actividad.fechas|length > 1 %}
-                                        <span class="ml-2 px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
+                                        <span class="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
                                             {{ actividad.fechas|length }} período{% if actividad.fechas|length > 1 %}s{% endif %}
                                         </span>
                                     {% endif %}
                                 </div>
-                                {% if actividad.linea_trabajo %}
-                                    <div class="text-xs text-gray-400 mt-1">{{ actividad.linea_trabajo }}</div>
-                                {% endif %}
                             </div>
                             
                             <!-- Timeline con múltiples barras -->
-                            <div class="timeline-container relative h-16 bg-gray-50" data-activity-type="{{ actividad.tipo }}">
-                                <!-- Las barras se generarán aquí con JavaScript -->
-                                {% for fecha in actividad.fechas %}
-                                    {% if fecha.fecha_inicio and fecha.fecha_fin %}
-                                        <div class="gantt-bar absolute top-2 h-12 rounded flex items-center justify-center text-white text-sm font-medium
-                                                    {% if actividad.tipo == 'Normal' %}bg-blue-500{% else %}bg-green-500{% endif %}"
-                                             data-start="{{ fecha.fecha_inicio }}"
-                                             data-end="{{ fecha.fecha_fin }}"
-                                             data-name="{{ actividad.nombre }}"
-                                             data-period="{{ forloop.counter }}"
-                                             style="left: 0%; width: 100px; min-width: 60px;">
-                                            <span class="truncate px-2 text-xs">{{ actividad.nombre|truncatechars:20 }}</span>
-                                        </div>
+                            <div class="timeline-container relative bg-gray-50" 
+                                style="min-height: 70px; height: auto; width: {{ gantt_data.total_weeks }}00px; min-width: {{ gantt_data.total_weeks }}00px;">
+                                {% for periodo in actividad.periodos_calculados %}
+                                    <div class="gantt-bar absolute top-3 rounded flex items-center justify-center text-white text-xs font-medium
+                                                {% if actividad.estado == 'PEN' %}bg-red-500{% elif actividad.estado == 'LPC' %}bg-yellow-500{% elif actividad.estado == 'EPR' %}bg-blue-500{% elif actividad.estado == 'COM' %}bg-green-500{% elif actividad.estado == 'TER' %}bg-purple-500{% else %}bg-gray-500{% endif %}"
+                                        style="left: {{ periodo.left_px }}px; width: {{ periodo.width_px }}px;"
+                                        data-activity-name="{{ actividad.nombre }}"
+                                        data-activity-type="{{ actividad.tipo }}"
+                                        data-activity-status="{{ actividad.estado }}"
+                                        data-start-date="{{ periodo.fecha_inicio }}"
+                                        data-end-date="{{ periodo.fecha_fin }}"
+                                        data-linea-trabajo="{{ actividad.linea_trabajo|default:'Sin línea de trabajo' }}"
+                                        data-periodo-num="{{ forloop.counter }}"
+                                        data-total-periodos="{{ actividad.periodos_calculados|length }}">
+                                        
+                                        <span class="truncate px-2">
+                                            {% if periodo.width_px > 80 %}
+                                                {{ actividad.nombre }}
+                                            {% elif periodo.width_px > 50 %}
+                                                {{ actividad.nombre|truncatechars:15 }}
+                                            {% else %}
+                                                {{ actividad.nombre|truncatechars:8 }}
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gantt con columnas mensuales (oculto por defecto) -->
+        <div id="gantt-mensual" class="gantt-wrapper border rounded-lg hidden">
+            <div class="gantt-container" style="min-width: calc(320px + {% widthratio gantt_data.total_weeks 1 35 %}px);">
+                <!-- Header con fechas mensuales -->
+                <div class="gantt-header flex bg-gray-100 border-b-2 border-gray-300 sticky top-0 z-100">
+                    <div class="activity-header w-80 font-bold text-gray-700 border-r border-gray-300 bg-gray-100 sticky left-0 z-101">
+                        Actividad
+                    </div>
+                    <div class="flex">
+                        <!-- Headers mensuales dinámicos usando datos de Django -->
+                        <div id="monthly-columns" class="flex">
+                            {% regroup gantt_data.columnas_semanales by month_name as monthly_groups %}
+                            {% for month_group in monthly_groups %}
+                                <div class="month-container border-r border-gray-300">
+                                    <!-- Header del mes con nombre completo (columnas de 35px) -->
+                                    <div class="month-header text-center bg-blue-50 border-b border-gray-300 py-2 px-1 font-bold text-xs text-gray-700" style="width: {% widthratio month_group.list|length 1 35 %}px; min-width: {% widthratio month_group.list|length 1 35 %}px;">
+                                        {% if month_group.grouper == 'Ene' %}Enero
+                                        {% elif month_group.grouper == 'Feb' %}Febrero
+                                        {% elif month_group.grouper == 'Mar' %}Marzo
+                                        {% elif month_group.grouper == 'Abr' %}Abril
+                                        {% elif month_group.grouper == 'May' %}Mayo
+                                        {% elif month_group.grouper == 'Jun' %}Junio
+                                        {% elif month_group.grouper == 'Jul' %}Julio
+                                        {% elif month_group.grouper == 'Ago' %}Agosto
+                                        {% elif month_group.grouper == 'Sep' %}Septiembre
+                                        {% elif month_group.grouper == 'Oct' %}Octubre
+                                        {% elif month_group.grouper == 'Nov' %}Noviembre
+                                        {% elif month_group.grouper == 'Dic' %}Diciembre
+                                        {% else %}{{ month_group.grouper }}{% endif %}
+                                    </div>
+                                    <!-- Subheader con semanas de 35px -->
+                                    <div class="weeks-subheader flex">
+                                        {% for week in month_group.list %}
+                                            <div class="week-subcolumn text-center border-r border-gray-200 bg-gray-50" style="width: 35px; min-width: 35px; max-width: 35px; flex: none; box-sizing: border-box;">
+                                                <div class="text-xs text-gray-500">{{ week.day_number }}</div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Filas de actividades agrupadas para vista mensual -->
+                <div class="gantt-rows">
+                    {% for actividad in total_actividades %}
+                        <!-- Separador de línea de trabajo -->
+                        {% if actividad.mostrar_separador %}
+                            <div class="work-line-separator flex bg-gradient-to-r from-gray-100 to-gray-50 border-b border-gray-300">
+                                <div class="work-line-label px-3 py-2 w-80 font-semibold text-sm text-gray-700 flex items-center bg-gradient-to-r from-gray-100 to-gray-50">
+                                    {% if actividad.tipo == 'Normal' %}
+                                        <span class="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                                    {% else %}
+                                        <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
                                     {% endif %}
+                                    {{ actividad.linea_trabajo|default:'Sin línea de trabajo' }}
+                                </div>
+                                <div class="work-line-fill flex-1 bg-gradient-to-r from-gray-100 to-gray-50"></div>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Fila de actividad -->
+                        <div class="gantt-row flex border-b border-gray-200 hover:bg-gray-50"
+                            data-linea-trabajo="{{ actividad.linea_trabajo|default:'sin-linea' }}">
+                            
+                            <!-- Información de actividad (idéntica a la vista semanal) -->
+                            <div class="activity-info w-80 border-r border-gray-300 bg-white">
+                                <div class="font-medium text-gray-800">{{ actividad.nombre }}</div>
+                                <div class="text-xs text-gray-500 mt-1 flex items-center flex-wrap gap-2">
+                                    <!-- Mostrar rango completo de fechas -->
+                                    <span>
+                                        {% if actividad.fechas %}
+                                            {% with actividad.fechas|first as primera_fecha %}
+                                            {% with actividad.fechas|last as ultima_fecha %}
+                                                {{ primera_fecha.fecha_inicio }} - {{ ultima_fecha.fecha_fin }}
+                                            {% endwith %}
+                                            {% endwith %}
+                                        {% endif %}
+                                    </span>
+                                    <span class="px-2 py-1 rounded text-xs {% if actividad.tipo == 'Normal' %}bg-blue-100 text-blue-800{% else %}bg-green-100 text-green-800{% endif %}">
+                                        {{ actividad.tipo }}
+                                    </span>
+                                    {% if actividad.fechas|length > 1 %}
+                                        <span class="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
+                                            {{ actividad.fechas|length }} período{% if actividad.fechas|length > 1 %}s{% endif %}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Timeline con múltiples barras (ajustado para columnas de 35px) -->
+                            <div class="timeline-container relative bg-gray-50" 
+                                style="min-height: 70px; height: auto; width: {% widthratio gantt_data.total_weeks 1 35 %}px; min-width: {% widthratio gantt_data.total_weeks 1 35 %}px;">
+                                {% for periodo in actividad.periodos_calculados %}
+                                    <div class="gantt-bar gantt-bar-monthly absolute top-3 rounded flex items-center justify-center text-white font-medium
+                                                {% if actividad.estado == 'PEN' %}bg-red-500{% elif actividad.estado == 'LPC' %}bg-yellow-500{% elif actividad.estado == 'EPR' %}bg-blue-500{% elif actividad.estado == 'COM' %}bg-green-500{% elif actividad.estado == 'TER' %}bg-purple-500{% else %}bg-gray-500{% endif %}"
+                                        style="left: {{ periodo.left_px_monthly }}px; width: {{ periodo.width_px_monthly }}px; font-size: 10px;"
+                                        data-activity-name="{{ actividad.nombre }}"
+                                        data-activity-type="{{ actividad.tipo }}"
+                                        data-activity-status="{{ actividad.estado }}"
+                                        data-start-date="{{ periodo.fecha_inicio }}"
+                                        data-end-date="{{ periodo.fecha_fin }}"
+                                        data-linea-trabajo="{{ actividad.linea_trabajo|default:'Sin línea de trabajo' }}"
+                                        data-periodo-num="{{ forloop.counter }}"
+                                        data-total-periodos="{{ actividad.periodos_calculados|length }}">
+                                        
+                                        <span class="truncate px-1 text-xs">
+                                            {% if periodo.width_px_monthly > 80 %}
+                                                {{ actividad.nombre }}
+                                            {% elif periodo.width_px_monthly > 50 %}
+                                                {{ actividad.nombre|truncatechars:10 }}
+                                            {% elif periodo.width_px_monthly > 35 %}
+                                                {{ actividad.nombre|truncatechars:5 }}
+                                            {% endif %}
+                                        </span>
+                                    </div>
                                 {% endfor %}
                             </div>
                         </div>
@@ -75,315 +236,151 @@
         </div>
         
         <!-- Leyenda -->
-        <div class="flex justify-center mt-6 space-x-6">
+        <div class="flex justify-center mt-1 space-x-3">
             <div class="flex items-center">
-                <div class="w-4 h-4 bg-blue-500 rounded mr-2"></div>
-                <span class="text-sm text-gray-600">Actividades Normales</span>
+                <div class="w-3 h-3 bg-red-500 rounded mr-1"></div>
+                <span class="text-xs text-gray-600">Pendiente</span>
             </div>
             <div class="flex items-center">
-                <div class="w-4 h-4 bg-green-500 rounded mr-2"></div>
-                <span class="text-sm text-gray-600">Actividades de Difusión</span>
+                <div class="w-3 h-3 bg-yellow-500 rounded mr-1"></div>
+                <span class="text-xs text-gray-600">Listo para comenzar</span>
+            </div>
+            <div class="flex items-center">
+                <div class="w-3 h-3 bg-blue-500 rounded mr-1"></div>
+                <span class="text-xs text-gray-600">En Progreso</span>
+            </div>
+            <div class="flex items-center">
+                <div class="w-3 h-3 bg-green-500 rounded mr-1"></div>
+                <span class="text-xs text-gray-600">Completada</span>
+            </div>
+            <div class="flex items-center">
+                <div class="w-3 h-3 bg-purple-500 rounded mr-1"></div>
+                <span class="text-xs text-gray-600">Terminada</span>
             </div>
         </div>
         
         <!-- Info -->
-        <div class="text-center text-sm text-gray-500 mt-4">
-            <span id="info-text">Cargando fechas...</span>
+        <div class="text-center text-sm text-gray-500 mt-2">
+            <span>{{ total_actividades|length }} actividades • {{ gantt_data.start_date }} - {{ gantt_data.end_date }} • {{ gantt_data.total_weeks }} semanas</span>
+        </div>
+        
+        <!-- Selector de vista flotante -->
+        <div class="fixed bottom-4 right-4 z-50">
+            <div class="flex bg-white border border-gray-200 rounded-xl shadow-2xl p-1.5 backdrop-blur-sm">
+                <button id="btn-vista-semanal" class="px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 vista-activa">
+                    Vista Semanal
+                </button>
+                <button id="btn-vista-mensual" class="px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200">
+                    Vista Mensual
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inicializando Gantt agrupado...');
+    // Agregar líneas de separación a los timeline containers según la vista
+    function aplicarGridFondo() {
+        // Semanal: paso de 100px
+        document.querySelectorAll('#gantt-semanal .timeline-container').forEach(container => {
+            container.style.backgroundImage = 'repeating-linear-gradient(to right, transparent 0px, transparent 99px, rgba(0,0,0,0.1) 99px, rgba(0,0,0,0.1) 100px)';
+        });
+        // Mensual: paso de 35px
+        document.querySelectorAll('#gantt-mensual .timeline-container').forEach(container => {
+            container.style.backgroundImage = 'repeating-linear-gradient(to right, transparent 0px, transparent 34px, rgba(0,0,0,0.08) 34px, rgba(0,0,0,0.08) 35px)';
+        });
+    }
+    aplicarGridFondo();
     
-    // Obtener todas las barras
+    // Selectores de elementos
+    const btnSemanal = document.getElementById('btn-vista-semanal');
+    const btnMensual = document.getElementById('btn-vista-mensual');
+    const ganttSemanal = document.getElementById('gantt-semanal');
+    const ganttMensual = document.getElementById('gantt-mensual');
+    
+    // Verificar que los elementos existen
+    if (!btnSemanal || !btnMensual || !ganttSemanal || !ganttMensual) {
+        return;
+    }
+    
+    // Funciones para cambio de vista
+    function mostrarVistaSemanal() {
+        ganttSemanal.classList.remove('hidden');
+        ganttMensual.classList.add('hidden');
+        btnSemanal.classList.add('vista-activa');
+        btnMensual.classList.remove('vista-activa');
+    }
+    
+    function mostrarVistaMensual() {
+        ganttSemanal.classList.add('hidden');
+        ganttMensual.classList.remove('hidden');
+        btnSemanal.classList.remove('vista-activa');
+        btnMensual.classList.add('vista-activa');
+    }
+    
+    // Event listeners para los botones
+    btnSemanal.addEventListener('click', mostrarVistaSemanal);
+    btnMensual.addEventListener('click', mostrarVistaMensual);
+    
+    // Tooltip simple
     const ganttBars = document.querySelectorAll('.gantt-bar');
+    let currentTooltip = null;
     
-    if (ganttBars.length === 0) {
-        console.log('No hay actividades');
-        return;
-    }
-    
-    // Obtener fechas mínima y máxima
-    let allDates = [];
     ganttBars.forEach(bar => {
-        const start = new Date(bar.dataset.start);
-        const end = new Date(bar.dataset.end);
-        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-            allDates.push(start, end);
-        }
-    });
-    
-    if (allDates.length === 0) {
-        console.log('No hay fechas válidas');
-        return;
-    }
-    
-    // Calcular rango de fechas
-    const minDate = new Date(Math.min(...allDates));
-    const maxDate = new Date(Math.max(...allDates));
-    
-    // Ajustar al inicio de la semana (lunes)
-    const startOfWeek = new Date(minDate);
-    const dayOfWeek = startOfWeek.getDay();
-    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    startOfWeek.setDate(startOfWeek.getDate() - daysToSubtract - 7);
-    
-    // Ajustar al final de la semana (domingo)
-    const endOfWeek = new Date(maxDate);
-    const endDayOfWeek = endOfWeek.getDay();
-    const daysToAdd = endDayOfWeek === 0 ? 7 : 7 - endDayOfWeek;
-    endOfWeek.setDate(endOfWeek.getDate() + daysToAdd + 7);
-    
-    // Calcular número de semanas
-    const totalWeeks = Math.ceil((endOfWeek - startOfWeek) / (1000 * 60 * 60 * 24 * 7));
-    const weekWidth = 100;
-    
-    console.log('Configuración:', {
-        inicio: startOfWeek.toDateString(),
-        fin: endOfWeek.toDateString(),
-        semanas: totalWeeks,
-        anchoTotal: totalWeeks * weekWidth
-    });
-    
-    // Generar header semanal
-    const dateHeader = document.getElementById('date-header');
-    dateHeader.innerHTML = '';
-    
-    for (let week = 0; week < totalWeeks; week++) {
-        const weekStart = new Date(startOfWeek);
-        weekStart.setDate(startOfWeek.getDate() + (week * 7));
-        
-        const weekDiv = document.createElement('div');
-        weekDiv.className = 'week-column text-center border-r border-gray-300 bg-gray-100';
-        weekDiv.style.width = `${weekWidth}px`;
-        weekDiv.style.minWidth = `${weekWidth}px`;
-        weekDiv.style.flex = 'none';
-        
-        // Marcar semana actual
-        const today = new Date();
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        const isCurrentWeek = today >= weekStart && today <= weekEnd;
-        
-        weekDiv.innerHTML = `
-            <div class="p-2">
-                <div class="font-bold text-xs ${isCurrentWeek ? 'text-blue-600' : 'text-gray-700'}">
-                    ${weekStart.toLocaleDateString('es-ES', { month: 'short' })}
-                </div>
-                <div class="text-xs text-gray-500">
-                    ${weekStart.getDate()}
-                </div>
-                ${isCurrentWeek ? '<div class="w-2 h-2 bg-blue-500 rounded-full mx-auto mt-1"></div>' : ''}
-            </div>
-        `;
-        
-        dateHeader.appendChild(weekDiv);
-    }
-    
-    // Ajustar ancho del contenedor
-    const totalWidth = 320 + (totalWeeks * weekWidth);
-    document.querySelector('.gantt-container').style.minWidth = `${totalWidth}px`;
-    
-    // Ajustar ancho de todos los timeline containers
-    document.querySelectorAll('.timeline-container').forEach(container => {
-        container.style.width = `${totalWeeks * weekWidth}px`;
-        container.style.minWidth = `${totalWeeks * weekWidth}px`;
-        
-        // Agregar líneas de separación semanal
-        container.style.backgroundImage = `repeating-linear-gradient(
-            to right,
-            transparent 0px,
-            transparent ${weekWidth - 1}px,
-            rgba(0,0,0,0.1) ${weekWidth - 1}px,
-            rgba(0,0,0,0.1) ${weekWidth}px
-        )`;
-    });
-    
-    // Función para detectar superposiciones
-    function periodsOverlap(period1, period2) {
-        return period1.start < period2.end && period2.start < period1.end;
-    }
-    
-    // Posicionar barras según fechas reales (agrupadas por actividad)
-    const activityRows = document.querySelectorAll('.gantt-row');
-    
-    activityRows.forEach(row => {
-        const barsInRow = row.querySelectorAll('.gantt-bar');
-        const activityType = row.querySelector('.timeline-container').dataset.activityType;
-        
-        // Obtener todas las fechas de esta actividad
-        const periods = Array.from(barsInRow).map(bar => ({
-            bar: bar,
-            start: new Date(bar.dataset.start),
-            end: new Date(bar.dataset.end),
-            period: parseInt(bar.dataset.period)
-        })).filter(p => !isNaN(p.start.getTime()) && !isNaN(p.end.getTime()));
-        
-        // Ordenar por fecha de inicio
-        periods.sort((a, b) => a.start - b.start);
-        
-        // Detectar superposiciones y crear capas
-        const layers = [];
-        
-        periods.forEach(period => {
-            let placed = false;
-            
-            // Intentar colocar en una capa existente
-            for (let i = 0; i < layers.length; i++) {
-                let canPlace = true;
-                
-                // Verificar si se superpone con algún período en esta capa
-                for (let existingPeriod of layers[i]) {
-                    if (periodsOverlap(period, existingPeriod)) {
-                        canPlace = false;
-                        break;
-                    }
-                }
-                
-                if (canPlace) {
-                    layers[i].push(period);
-                    period.layer = i;
-                    placed = true;
-                    break;
-                }
-            }
-            
-            // Si no se pudo colocar en ninguna capa, crear una nueva
-            if (!placed) {
-                layers.push([period]);
-                period.layer = layers.length - 1;
-            }
-        });
-        
-        const totalLayers = layers.length;
-        console.log(`Actividad "${periods[0]?.bar.dataset.name}": ${periods.length} períodos en ${totalLayers} capas`);
-        
-        // Calcular dimensiones
-        const containerHeight = 64; // Altura base del contenedor
-        const padding = 4; // Padding total (2px arriba y abajo)
-        const availableHeight = containerHeight - padding;
-        
-        let barHeight, spacing;
-        
-        if (totalLayers === 1) {
-            // Sin superposiciones: usar toda la altura disponible
-            barHeight = availableHeight;
-            spacing = 0;
-        } else {
-            // Con superposiciones: dividir la altura entre las capas
-            spacing = Math.min(2, Math.floor(availableHeight / (totalLayers * 8))); // Máximo 2px de espaciado
-            barHeight = Math.max(12, Math.floor((availableHeight - (spacing * (totalLayers - 1))) / totalLayers));
-        }
-        
-        // Posicionar cada período
-        periods.forEach(period => {
-            const bar = period.bar;
-            
-            // Calcular posición en semanas desde el inicio
-            const startWeekOffset = (period.start - startOfWeek) / (1000 * 60 * 60 * 24 * 7);
-            const endWeekOffset = (period.end - startOfWeek) / (1000 * 60 * 60 * 24 * 7);
-            
-            // Convertir a píxeles
-            const leftPx = Math.max(0, startWeekOffset * weekWidth);
-            const widthPx = Math.max(30, (endWeekOffset - startWeekOffset) * weekWidth);
-            
-            // Calcular posición vertical basada en la capa
-            const topPx = 2 + (period.layer * (barHeight + spacing));
-            
-            // Aplicar estilos
-            bar.style.left = `${leftPx}px`;
-            bar.style.width = `${widthPx}px`;
-            bar.style.height = `${barHeight}px`;
-            bar.style.top = `${topPx}px`;
-            bar.style.position = 'absolute';
-            
-            // Ajustar el texto del nombre de la actividad según el ancho disponible
-            const textSpan = bar.querySelector('span');
-            const activityName = bar.dataset.name;
-            
-            if (widthPx < 80) {
-                textSpan.textContent = activityName.length > 8 ? activityName.substring(0, 8) + '...' : activityName;
-                textSpan.className = 'text-xs font-bold px-1';
-            } else if (widthPx < 150) {
-                textSpan.textContent = activityName.length > 15 ? activityName.substring(0, 15) + '...' : activityName;
-                textSpan.className = 'text-xs px-2';
-            } else if (widthPx < 200) {
-                textSpan.textContent = activityName.length > 20 ? activityName.substring(0, 20) + '...' : activityName;
-                textSpan.className = 'text-sm px-2';
-            } else {
-                textSpan.textContent = activityName;
-                textSpan.className = 'text-sm px-2';
-            }
-            
-            // Ajustar tamaño de fuente según altura de la barra
-            if (barHeight < 20) {
-                textSpan.style.fontSize = '10px';
-                textSpan.style.lineHeight = `${barHeight}px`;
-            } else if (barHeight < 30) {
-                textSpan.style.fontSize = '12px';
-                textSpan.style.lineHeight = `${barHeight}px`;
-            } else {
-                textSpan.style.fontSize = '14px';
-                textSpan.style.lineHeight = `${barHeight}px`;
-            }
-            
-            console.log(`"${bar.dataset.name}" - Período ${period.period} (Capa ${period.layer}):`, {
-                inicio: period.start.toDateString(),
-                fin: period.end.toDateString(),
-                left: `${leftPx}px`,
-                width: `${widthPx}px`,
-                top: `${topPx}px`,
-                height: `${barHeight}px`
-            });
-        });
-        
-        // Ajustar la altura del contenedor si es necesario
-        const requiredHeight = 4 + (totalLayers * barHeight) + ((totalLayers - 1) * spacing);
-        const finalHeight = Math.max(containerHeight, requiredHeight);
-        
-        if (finalHeight > containerHeight) {
-            const container = row.querySelector('.timeline-container');
-            container.style.height = `${finalHeight}px`;
-            row.style.minHeight = `${finalHeight}px`;
-        }
-    });
-    
-    // Tooltips mejorados (sin conflictos de posicionamiento)
-    ganttBars.forEach(bar => {
-        let currentTooltip = null;
-        
         bar.addEventListener('mouseenter', function(e) {
-            // Remover tooltip previo si existe
             if (currentTooltip) {
                 currentTooltip.remove();
                 currentTooltip = null;
             }
             
+            const activityName = this.dataset.activityName;
+            const activityStatus = this.dataset.activityStatus;
+            const startDate = this.dataset.startDate;
+            const endDate = this.dataset.endDate;
+            const periodoNum = this.dataset.periodoNum;
+            const totalPeriodos = this.dataset.totalPeriodos;
+            
             const tooltip = document.createElement('div');
-            tooltip.className = 'gantt-tooltip fixed z-50 bg-gray-900 text-white text-xs rounded-lg py-2 px-3 pointer-events-none shadow-xl';
-            tooltip.style.maxWidth = '250px';
+            tooltip.className = 'gantt-tooltip fixed z-50 bg-gray-900 rounded-lg shadow-xl pointer-events-none';
+            tooltip.style.maxWidth = '280px';
+            tooltip.style.minWidth = '220px';
             
-            const startDate = new Date(this.dataset.start);
-            const endDate = new Date(this.dataset.end);
-            const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-            const period = this.dataset.period;
+            const totalPeriodosNum = parseInt(totalPeriodos) || 1;
+            const periodoNumInt = parseInt(periodoNum) || 1;
             
-            tooltip.innerHTML = `
-                <div class="font-bold mb-1">${this.dataset.name}</div>
-                <div class="text-yellow-300 mb-1">Período ${period}</div>
-                <div class="mb-1">${startDate.toLocaleDateString('es-ES')} - ${endDate.toLocaleDateString('es-ES')}</div>
-                <div>Duración: ${days} día${days !== 1 ? 's' : ''}</div>
-            `;
+            // Traducir estado de actividad
+            const estadosMap = {
+                'PEN': 'Pendiente',
+                'LPC': 'Listo para comenzar',
+                'EPR': 'En progreso',
+                'COM': 'Completada',
+                'TER': 'Terminada'
+            };
+            const estadoTexto = estadosMap[activityStatus] || 'Sin estado';
             
-            // Posicionar el tooltip cerca del cursor
+                    let periodoHtml = '';
+                    if (totalPeriodosNum > 1) {
+                        periodoHtml = '<div class="text-xs text-yellow-300 mb-2 font-medium">' +
+                                      'Período ' + periodoNumInt + ' de ' + totalPeriodosNum +
+                                      '</div>';
+                    }
+                    tooltip.innerHTML = '<div class="p-3">' +
+                        '<div class="font-bold text-white text-sm mb-2 leading-tight">' +
+                            activityName +
+                        '</div>' +
+                        periodoHtml +
+                        '<div class="text-gray-200 font-medium text-xs">' +
+                            startDate + ' - ' + endDate +
+                        '</div>' +
+                    '</div>';
+            
             const rect = this.getBoundingClientRect();
             const tooltipX = rect.left + (rect.width / 2);
             const tooltipY = rect.top - 10;
             
-            tooltip.style.left = `${tooltipX}px`;
-            tooltip.style.top = `${tooltipY}px`;
+            tooltip.style.left = tooltipX + 'px';
+            tooltip.style.top = tooltipY + 'px';
             tooltip.style.transform = 'translate(-50%, -100%)';
             
             document.body.appendChild(tooltip);
@@ -397,28 +394,88 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
-    // Contar actividades únicas
-    const uniqueActivities = activityRows.length;
-    const totalPeriods = ganttBars.length;
-    
-    // Actualizar información
-    document.getElementById('info-text').textContent = 
-        `${uniqueActivities} actividades • ${totalPeriods} períodos • ${startOfWeek.toLocaleDateString('es-ES')} - ${endOfWeek.toLocaleDateString('es-ES')} • ${totalWeeks} semanas`;
 });
 </script>
 
 <style>
 .gantt-container {
     font-family: Arial, sans-serif;
+    position: relative;
+    z-index: 1;
+}
+
+/* Wrapper con altura reducida para evitar scroll de página */
+.gantt-wrapper {
+    position: relative;
+    max-height: 77vh;
+    overflow-x: auto;
+    overflow-y: auto;
+    display: block;
+}
+
+/* Header de actividades fijo */
+.activity-header {
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 101 !important;
+}
+
+/* Forzar padding consistente en todos los elementos de actividad */
+.activity-header,
+.activity-info,
+.work-line-label {
+    padding: 8px !important;
+}
+
+/* Forzar alineación perfecta de todas las columnas */
+* {
+    box-sizing: border-box;
+}
+
+.gantt-header,
+.gantt-header .flex,
+.gantt-header .flex > div,
+.week-column,
+.week-subcolumn,
+.timeline-container,
+.month-container,
+.weeks-subheader {
+    box-sizing: border-box !important;
+}
+
+/* Columna de información de actividades fija */
+.activity-info {
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    left: 0;
+    z-index: 50;
+    background: white;
+}
+
+/* Separadores de línea de trabajo fijos */
+.work-line-separator {
+    position: relative;
+}
+
+.work-line-label {
+    position: sticky;
+    left: 0;
+    z-index: 70;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+}
+
+.work-line-fill {
+    background: inherit;
 }
 
 .gantt-bar {
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    border: 1px solid rgba(255,255,255,0.2);
-    overflow: hidden; /* Evita que el texto se salga */
+    overflow: hidden;
+    height: 50px !important;
+    min-height: 50px !important;
 }
 
 .gantt-bar:hover {
@@ -426,6 +483,13 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     z-index: 20;
     opacity: 1 !important;
+}
+
+/* Ancho mínimo para barras en vista mensual */
+.gantt-bar-monthly {
+    min-width: 25px !important;
+    height: 50px !important;
+    min-height: 50px !important;
 }
 
 .gantt-bar span {
@@ -445,24 +509,121 @@ document.addEventListener('DOMContentLoaded', function() {
     opacity: 1 !important;
 }
 
+.gantt-row:hover .activity-info {
+    background-color: #f8f9fa;
+}
+
 .timeline-container {
     position: relative;
-    border-left: 1px solid #e5e7eb;
+    border-left: 0;
     transition: height 0.3s ease;
-    overflow: visible; /* Permite que los tooltips se muestren */
+    overflow: visible;
+    box-sizing: border-box;
 }
 
 .week-column {
-    border-left: 1px solid #d1d5db;
+    box-sizing: border-box !important;
+    border-left: 0;
 }
 
-/* Tooltip personalizado */
+/* Forzar alineación correcta entre header y contenido */
+.gantt-header .flex > div,
+.timeline-container {
+    box-sizing: border-box !important;
+}
+
+/* Asegurar que todas las columnas tengan el mismo ancho exacto */
+.week-column,
+.week-subcolumn {
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+}
+
+/* Vista semanal: columnas de 100px exactos */
+#gantt-semanal .week-column {
+    width: 100px !important;
+    min-width: 100px !important;
+    max-width: 100px !important;
+}
+
+/* Vista mensual: subcolumnas de 35px exactos */
+#gantt-mensual .week-subcolumn {
+    width: 35px !important;
+    min-width: 35px !important;
+    max-width: 35px !important;
+}
+
+/* Timeline containers con anchos calculados exactos */
+#gantt-semanal .timeline-container {
+    box-sizing: border-box !important;
+}
+
+#gantt-mensual .timeline-container {
+    box-sizing: border-box !important;
+}
+
+/* Eliminar cualquier espacio en blanco entre columnas */
+.gantt-header .flex {
+    font-size: 0;
+}
+
+.gantt-header .flex > div {
+    font-size: 12px;
+}
+
+.weeks-subheader {
+    font-size: 0;
+}
+
+.weeks-subheader .week-subcolumn {
+    font-size: 10px;
+}
+
+/* Forzar borders consistentes */
+.week-column,
+.week-subcolumn {
+    border-style: solid !important;
+    border-width: 0 1px 0 0 !important;
+    border-color: #d1d5db !important;
+}
+
+/* Alineación perfecta con margin y padding cero */
+.gantt-header .flex,
+.weeks-subheader {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.week-column,
+.week-subcolumn {
+    margin: 0 !important;
+}
+
 .gantt-tooltip {
     z-index: 9999;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15), 0 5px 10px rgba(0,0,0,0.05);
 }
 
-/* Scroll horizontal mejorado */
+/* Scroll personalizado mejorado */
+.overflow-x-auto::-webkit-scrollbar {
+    height: 10px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+    background: linear-gradient(90deg, #f8fafc 0%, #e2e8f0 50%, #f8fafc 100%);
+    border-radius: 5px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #cbd5e1 0%, #94a3b8 50%, #cbd5e1 100%);
+    border-radius: 5px;
+    border: 2px solid #f8fafc;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, #94a3b8 0%, #64748b 50%, #94a3b8 100%);
+}
+
 .overflow-x-auto::-webkit-scrollbar {
     height: 8px;
 }
@@ -481,16 +642,117 @@ document.addEventListener('DOMContentLoaded', function() {
     background: #94a3b8;
 }
 
-/* Header sticky */
 .gantt-header {
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    background: #f3f4f6 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* Animación para filas con múltiples períodos */
+
+
 .gantt-row {
     transition: min-height 0.3s ease;
+    min-height: 70px;
+}
+
+/* Separadores de línea de trabajo */
+.work-line-separator {
+    position: relative;
+}
+
+/* Agrupación visual por línea de trabajo */
+.gantt-row[data-linea-trabajo] {
+    position: relative;
+}
+
+.gantt-row[data-linea-trabajo]:not([data-linea-trabajo="sin-linea"]):before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, #3b82f6 0%, #10b981 100%);
+    opacity: 0.6;
+}
+
+/* Estilos para cambio de vista */
+#btn-vista-semanal, #btn-vista-mensual {
+    background-color: #f9fafb;
+    color: #6b7280;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+#btn-vista-semanal:hover, #btn-vista-mensual:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+.vista-activa {
+    background-color: #f9fafb !important;
+    color: #374151 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+    border: 1px solid #e5e7eb !important;
+}
+
+/* Estilos para vista mensual */
+.month-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.month-header {
+    position: sticky;
+    top: 0;
+    z-index: 90;
+    box-sizing: border-box;
+}
+
+.weeks-subheader {
+    position: sticky;
+    top: 32px;
+    z-index: 85;
+}
+
+.week-subcolumn {
+    /* Subcolumnas de 35px en vista mensual, incluyendo bordes */
+    box-sizing: border-box;
+    min-width: 35px;
+    max-width: 35px;
+}
+
+/* Ocultar elementos */
+.hidden {
+    display: none !important;
+}
+
+/* Ajustar scroll para vista mensual */
+.month-container .week-subcolumn {
+    background-image: repeating-linear-gradient(
+        to right,
+        transparent 0px,
+        transparent 99px,
+        rgba(0,0,0,0.05) 99px,
+        rgba(0,0,0,0.05) 100px
+    );
+}
+
+/* Asegurar alineación correcta en vista mensual */
+#gantt-mensual .timeline-container {
+    position: relative;
+    left: 0 !important;
+    margin-left: 0 !important;
+}
+
+#gantt-mensual .gantt-bar {
+    position: absolute;
 }
 </style>
+
+
+
+
 {% endblock %}
