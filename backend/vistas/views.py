@@ -2,10 +2,97 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from proyectos.models import Proyecto, Actividad, ActividadDifusion, EstadoActividad, ActividadBase
+from proyectos.models import Proyecto, Actividad, ActividadDifusion, ActividadBase, LineaTrabajo, ActividadDifusion_Linea, Actividad_Encargado
 from datetime import datetime, timedelta
 from django.contrib import messages
+from django.db import models
 
+
+
+def obtener_datos(request, proyecto_id):
+    proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+    
+    actividades_normales = Actividad.objects.filter(
+        linea_trabajo__proyecto=proyecto
+    ).order_by('fecha_creacion')
+    
+    actividades_difusion = ActividadDifusion.objects.filter(
+        proyecto=proyecto
+    ).order_by('fecha_creacion')
+    
+    todas_actividades = []
+
+    # Actividades normales
+    for actividad in actividades_normales:
+        fechas_lista = []
+        for fecha in actividad.fechas.filter(estado=True):
+            inicio = fecha.fecha_inicio
+            fin = fecha.fecha_fin
+            if inicio and fin and inicio == fin:
+                fin += timedelta(days=1)
+            fechas_lista.append({
+                "fecha_inicio": inicio.strftime('%Y-%m-%d') if inicio else None,
+                "fecha_fin": fin.strftime('%Y-%m-%d') if fin else None
+            })
+        consulta_2 = Actividad_Encargado.objects.filter(actividad=actividad).select_related('encargado')
+        encargados = [rel.encargado.nombre for rel in consulta_2]
+        todas_actividades.append({
+            'id': actividad.id,
+            'nombre': actividad.nombre or f"Actividad {actividad.id}",
+            'fechas': fechas_lista,
+            'tipo': 'Normal',
+            'encargados': encargados,
+            'estado': actividad.get_estado_display() if hasattr(actividad, 'get_estado_display') else 'Sin estado',
+            'estado_valor': actividad.estado, 
+            'linea_trabajo': actividad.linea_trabajo.nombre if actividad.linea_trabajo else 'Sin línea',
+        })
+
+    # Actividades de difusión
+    for actividad in actividades_difusion:
+        fechas_lista = []
+        for fecha in actividad.fechas.filter(estado=True):
+            inicio = fecha.fecha_inicio
+            fin = fecha.fecha_fin
+            if inicio and fin and inicio == fin:
+                fin += timedelta(days=1)
+            fechas_lista.append({
+                "fecha_inicio": inicio.strftime('%Y-%m-%d') if inicio else None,
+                "fecha_fin": fin.strftime('%Y-%m-%d') if fin else None
+            })
+
+        consulta= ActividadDifusion_Linea.objects.filter(actividad=actividad).select_related('linea_trabajo')
+        lineas_trabajo = [rel.linea_trabajo.nombre for rel in consulta]
+
+        consulta_2 = Actividad_Encargado.objects.filter(actividad=actividad).select_related('encargado')
+        encargados = [rel.encargado.nombre for rel in consulta_2]
+
+
+        todas_actividades.append({
+            'id': actividad.id,
+            'nombre': actividad.nombre or f"Actividad Difusión {actividad.id}",
+            'fechas': fechas_lista,
+            'tipo': 'Difusión',
+            'encargados': encargados,
+            'estado': actividad.get_estado_display() if hasattr(actividad, 'get_estado_display') else 'Sin estado',
+            'estado_valor': actividad.estado, 
+            'linea_trabajo': lineas_trabajo,
+        })
+
+    estados = [
+        ('PEN', 'Pendiente'),
+        ('LPC', 'Listo para comenzar'),
+        ('EPR', 'En progreso'),
+        ('COM', 'Completada'),
+        ('TER', 'Terminada'),
+    ]
+
+    context = {
+        'proyecto': proyecto,
+        'actividades': todas_actividades,
+        'estados': estados,
+    }
+
+    return context
 
 
 
@@ -80,72 +167,20 @@ def vista_gantt(request, proyecto_id):
     return render(request, 'vistas/vista_gantt.html', context)
 
 
+
 def lista_actividades(request, proyecto_id):
-    proyecto = get_object_or_404(Proyecto, id=proyecto_id)
-    actividades_normales = Actividad.objects.filter(
-        linea_trabajo__proyecto=proyecto
-    ).select_related('linea_trabajo').prefetch_related('actividad_encargados__encargado')
+    
+    context = obtener_datos(request, proyecto_id)
 
-    actividades_difusion = ActividadDifusion.objects.filter(
-        proyecto=proyecto
-    ).prefetch_related('actividad_difusion_encargados__encargado')
-
-    todas_actividades = []
-    for a in actividades_normales:
-        encargados = [ae.encargado.nombre for ae in a.actividad_encargados.all()]
-        todas_actividades.append({
-            'id': a.id,
-            'nombre': a.nombre or f"Actividad {a.id}",
-            'tipo': 'Normal',
-            'estado': a.get_estado_display(),
-            'estado_valor': a.estado,
-            'linea_trabajo': a.linea_trabajo.nombre if a.linea_trabajo else 'Sin línea',
-            'encargados': encargados if encargados else ["No asignado"],
-        })
-
-    for a in actividades_difusion:
-        encargados = [ade.encargado.nombre for ade in a.actividad_difusion_encargados.all()]
-        todas_actividades.append({
-            'id': a.id,
-            'nombre': a.nombre or f"Actividad Difusión {a.id}",
-            'tipo': 'Difusión',
-            'estado': a.get_estado_display(),
-            'estado_valor': a.estado,
-            'linea_trabajo': None,
-            'encargados': encargados if encargados else ["No asignado"],
-        })
-
-    context = {
-        'proyecto': proyecto,
-        'actividades': todas_actividades,
-        'estado_choices': Actividad._meta.get_field('estado').choices,  
-    }
     return render(request, "vistas/vista_lista.html", context)
 
 
-
-
 def vista_tablero(request, proyecto_id):
-    proyecto = get_object_or_404(Proyecto, id=proyecto_id)
 
-    actividades_normales = Actividad.objects.filter(linea_trabajo__proyecto=proyecto).select_related('linea_trabajo')
-    actividades_difusion = ActividadDifusion.objects.filter(proyecto=proyecto)
+    context = obtener_datos(request, proyecto_id)
 
-    todas_actividades = list(actividades_normales) + list(actividades_difusion)
+    return render(request, 'vistas/vista_tablero.html', context)
 
-    estados = [
-        ('PEN', 'Pendiente'),
-        ('LPC', 'Listo para comenzar'),
-        ('EPR', 'En progreso'),
-        ('COM', 'Completada'),
-        ('TER', 'Terminada'),
-    ]
-
-    return render(request, 'vistas/vista_tablero.html', {
-        'proyecto': proyecto,
-        'actividades': todas_actividades,
-        'estados': estados,
-    })
 
 
 @csrf_exempt

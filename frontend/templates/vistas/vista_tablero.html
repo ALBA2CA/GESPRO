@@ -23,19 +23,26 @@
 
         <div class="actividad-lista flex-1 flex flex-col overflow-y-auto max-h-[calc(100vh-200px)]">
             {% for actividad in actividades %}
-            {% if actividad.estado == estado %}
-            <div class="actividad-card bg-white p-4 mb-3 rounded-xl border-2 border-blue-500 flex flex-col justify-start"
-                 data-id="{{ actividad.id }}">
-                <strong class="text-gray-800">{{ actividad.nombre }}</strong>
-                {% if actividad.linea_trabajo %}
-                <small class="text-gray-500">Línea: {{ actividad.linea_trabajo.nombre }}</small>
+                {% if actividad.estado_valor == estado %}
+                    <div class="actividad-card bg-white p-4 mb-3 rounded-xl border-2 border-blue-500 flex flex-col justify-start"
+                            data-id="{{ actividad.id }}">
+                        <strong class="text-gray-800">{{ actividad.nombre }}</strong>
+                        {% if actividad.linea_trabajo %}
+                            <small class="text-gray-500">Línea: 
+                                {% if act.tipo == "Difusión" %}
+                                    {{ actividad.linea_trabajo|join:"-" }}
+                                {% else %} 
+                                    {{ actividad.linea_trabajo }}
+                                {% endif %}
+                            </small>
+                        {% endif %}
+                        {% if actividad.producto_asociado %}
+                        <small class="text-gray-500">Producto: {{ actividad.producto_asociado.nombre }}</small>
+                        {% endif %}
+                        <small class="text-gray-500">Encargado: {{ actividad.encargados|join:", " }}</small>
+                        <small class="text-gray-400">{{ actividad.tipo }}</small>
+                    </div>
                 {% endif %}
-                {% if actividad.producto_asociado %}
-                <small class="text-gray-500">Producto: {{ actividad.producto_asociado.nombre }}</small>
-                {% endif %}
-                <small class="text-gray-400">{{ actividad.tipo }}</small>
-            </div>
-            {% endif %}
             {% endfor %}
         </div>
     </div>

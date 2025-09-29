@@ -33,8 +33,9 @@
           </a>
           <a href="{% url 'vista_tablero' proyecto.id %}" class="text-white hover:text-gray-300 {% if request.resolver_match.url_name == 'vista_tablero' %}font-bold border-b-2 border-white{% endif %}">
               Tablero
-          <a href="{% url 'vista_gantt' proyecto.id %}" class="text-white hover:text-gray-300 {% if request.resolver_match.url_name == 'otra_vista' %}font-bold border-b-2 border-white{% endif %}">
-              Otra Vista
+          </a>
+          <a href="{% url 'listado_alertas' proyecto.id %}" class="text-white hover:text-gray-300 {% if request.resolver_match.url_name == 'listado_alertas' %}font-bold border-b-2 border-white{% endif %}">
+              Alertas
           </a>
           <a href="{% url 'vista_gantt' proyecto.id %}" class="text-white hover:text-gray-300 {% if request.resolver_match.url_name == 'otra_vista' %}font-bold border-b-2 border-white{% endif %}">
               Reportes

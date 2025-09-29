@@ -1,4 +1,4 @@
-{% extends 'base/navbar1.html' %}
+{% extends 'base/navbar2.html' %}
 {% load static tailwind_tags %}
 
 {% block content %}
@@ -29,7 +29,7 @@
                             </td>
 
                             <!-- Nombre -->
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ actividad.nombre }}</td>
+                            <td class="px-6 py-4 text-sm font-medium text-gray-900 w-64 break-words"> {{ actividad.nombre }}</td>
 
                             <!-- Responsables -->
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

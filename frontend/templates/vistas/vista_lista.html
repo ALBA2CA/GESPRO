@@ -46,7 +46,7 @@
                     name="estado" 
                     class="border border-gray-600 text-sm rounded p-1"
                     data-actividad-id="{{ act.id }}">
-                    {% for value, label in estado_choices %}
+                    {% for value, label in estados %}
                         <option value="{{ value }}" {% if value == act.estado_valor %}selected{% endif %}>
                             {{ label }}
                         </option>
@@ -58,8 +58,13 @@
         <!-- Datos adicionales debajo -->
         <div class="mt-3 text-sm flex gap-6">
             <p><span class="font-bold">Tipo:</span> {{ act.tipo }}</p>
-            <p><span class="font-bold">Encargados:</span> {{ act.encargados |join:", " }}</p>
-            <p><span class="font-bold">Línea:</span> {{ act.linea_trabajo|default:"—" }}</p>
+            <p><span class="font-bold">Encargados:</span> {{ act.encargados|join:", " }}</p>
+
+            {% if act.tipo == "Difusión" %}
+                <p><span class="font-bold">Línea:</span> {{ act.linea_trabajo|join:"-" }}</p>
+            {% else %} 
+                <p><span class="font-bold">Línea:</span> {{ act.linea_trabajo }}</p>
+            {% endif %}
         </div>
     </div>
     {% empty %}
