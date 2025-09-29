@@ -1,14 +1,26 @@
 {% extends 'base/navbar2.html' %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-4">
-    <input type="text" placeholder="Buscar..." class="px-3 py-1 border rounded-md border-gray-300 w-56 focus:outline-none focus:ring-2 focus:ring-blue-500">
-</div>
-
 <div class="flex gap-6 h-[calc(100vh-200px)]">
     {% for estado, nombre_estado in estados %}
     <div id="estado-{{ estado }}" class="flex-1 bg-gray-100 rounded-md p-4 flex flex-col border-2 border-blue-950">
-        <h3 class="text-center font-semibold mb-3">{{ nombre_estado }}</h3>
+        <!-- Nombre del estado con círculo de color -->
+        <h3 class="text-center font-semibold mb-3 flex items-center justify-center space-x-2">
+            {% comment %} Circulo de color según el estado {% endcomment %}
+            {% if estado == 'PEN' %}
+            <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+            {% elif estado == 'LPC' %}
+            <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+            {% elif estado == 'EPR' %}
+            <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+            {% elif estado == 'COM' %}
+            <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+            {% elif estado == 'TER' %}
+            <div class="w-3 h-3 bg-purple-500 rounded-full"></div>
+            {% endif %}
+            <span>{{ nombre_estado }}</span>
+        </h3>
+
         <div class="actividad-lista flex-1 flex flex-col overflow-y-auto max-h-[calc(100vh-200px)]">
             {% for actividad in actividades %}
             {% if actividad.estado == estado %}
@@ -25,7 +37,6 @@
             </div>
             {% endif %}
             {% endfor %}
-
         </div>
     </div>
     {% endfor %}
@@ -34,11 +45,11 @@
 <style>
 /* Fantasma solo con borde, sin contenido */
 .ghost-placeholder {
-    border: 2px dashed #3b82f6; /* border-blue-500 */
+    border: 2px dashed #3b82f6;
     background-color: transparent;
-    border-radius: 0.75rem; /* rounded-xl */
-    height: 60px; /* altura aproximada de una tarjeta */
-    margin-bottom: 0.75rem; /* mb-3 */
+    border-radius: 0.75rem;
+    height: 60px;
+    margin-bottom: 0.75rem;
 }
 </style>
 
@@ -51,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
             animation: 150,
             ghostClass: 'ghost-placeholder',
             dragClass: 'opacity-80',
-            // quitamos swap
+
             onStart: function(evt) {
                 evt.item.dataset.originalContent = evt.item.innerHTML;
                 evt.item.innerHTML = '';
@@ -61,7 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const actividadId = evt.item.dataset.id;
                 const nuevoEstado = evt.to.closest('[id^="estado-"]').id.replace('estado-', '');
                 
-                // AJAX a Django
                 fetch("{% url 'actualizar_estado' %}", {
                     method: "POST",
                     headers: {

@@ -41,22 +41,17 @@
             <div class="text-2l font-semibold">
                 {{ act.nombre }}
             </div>
-
-            <div>
-                <form method="POST" action="{% url 'actualizar_estado_actividad' act.id %}">
-                    {% csrf_token %}
-                    <select 
-                        name="estado" 
-                        class="border border-gray-600  text-sm rounded p-1"
-                        data-actividad-id="{{ act.id }}">
-                        {% for value, label in estado_choices %}
-                            <option value="{{ value }}" {% if value == act.estado_valor %}selected{% endif %}>
-                                {{ label }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit" class="ml-2 bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm">Actualizar</button>
-                </form>
+            <div class="estado-actividad">
+                <select 
+                    name="estado" 
+                    class="border border-gray-600 text-sm rounded p-1"
+                    data-actividad-id="{{ act.id }}">
+                    {% for value, label in estado_choices %}
+                        <option value="{{ value }}" {% if value == act.estado_valor %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
 
@@ -72,31 +67,38 @@
     {% endfor %}
 </div>
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-    document.querySelectorAll("form").forEach(form => {
-        const select = form.querySelector("select[name='estado']");
-        const button = form.querySelector("button[type='submit']");
-        
-        // Guardamos el valor inicial
-        const valorInicial = select.value;
-        
-        // Inicialmente bloqueamos el botón
-        button.disabled = true;
-        button.classList.add("opacity-50", "cursor-not-allowed");
-        
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll("select[name='estado']").forEach(select => {
+        let valorInicial = select.value
+
         select.addEventListener("change", function() {
-            if (select.value === valorInicial) {
-                // Sin cambios
-                button.disabled = true;
-                button.classList.add("opacity-50", "cursor-not-allowed");
-            } else {
-                // Habilitado
-                button.disabled = false;
-                button.classList.remove("opacity-50", "cursor-not-allowed");
-            }
-        });
-    });
-});
+            const actividadId = select.dataset.actividadId
+            const nuevoEstado = select.value
+
+            if (nuevoEstado === valorInicial) return
+
+            fetch("{% url 'actualizar_estado' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: `actividad_id=${actividadId}&nuevo_estado=${nuevoEstado}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    valorInicial = nuevoEstado
+                } else {
+                    select.value = valorInicial 
+                }
+            })
+            .catch(err => {
+                select.value = valorInicial
+            })
+        })
+    })
+})
 </script>
 
 {% endblock %}

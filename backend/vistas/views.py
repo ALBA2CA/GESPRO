@@ -2,7 +2,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from proyectos.models import Proyecto, Actividad, ActividadDifusion
+from proyectos.models import Proyecto, Actividad, ActividadDifusion, EstadoActividad, ActividadBase
 from datetime import datetime, timedelta
 from django.contrib import messages
 
@@ -12,27 +12,18 @@ from django.contrib import messages
 def vista_gantt(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
 
-    # Obtener todas las actividades normales (a través de linea_trabajo)
     actividades_normales = Actividad.objects.filter(linea_trabajo__proyecto=proyecto).order_by('fecha_creacion')
-    
-    # Obtener todas las actividades de difusión (directamente relacionadas con proyecto)
-    actividades_difusion = ActividadDifusion.objects.filter(proyecto=proyecto).order_by('fecha_creacion')
-    
-    # Combinar todas las actividades en una lista
+    actividades_difusion = ActividadDifusion.objects.filter(proyecto=proyecto).order_by('fecha_creacion')  
     todas_actividades = []
 
-    # Agregar actividades normales
     for actividad in actividades_normales:
-        # Obtener todas las fechas activas
         fechas = actividad.fechas.filter(estado=True)
         
         fechas_lista = []
         for fecha in fechas:
-            # Ajustar fechas para evitar duración 0
             fecha_inicio = fecha.fecha_inicio
             fecha_fin = fecha.fecha_fin
             
-            # Si las fechas son iguales, agregar un día a la fecha fin
             if fecha_inicio and fecha_fin and fecha_inicio == fecha_fin:
                 fecha_fin = fecha_fin + timedelta(days=1)
             
@@ -51,17 +42,14 @@ def vista_gantt(request, proyecto_id):
             'linea_trabajo': actividad.linea_trabajo.nombre if actividad.linea_trabajo else 'Sin línea',
         })
     
-    # Agregar actividades de difusión
     for actividad in actividades_difusion:
         fechas = actividad.fechas.filter(estado=True)
         
         fechas_lista = []
         for fecha in fechas:
-            # Ajustar fechas para evitar duración 0
             fecha_inicio = fecha.fecha_inicio
             fecha_fin = fecha.fecha_fin
-            
-            # Si las fechas son iguales, agregar un día a la fecha fin
+
             if fecha_inicio and fecha_fin and fecha_inicio == fecha_fin:
                 fecha_fin = fecha_fin + timedelta(days=1)
             
@@ -80,7 +68,6 @@ def vista_gantt(request, proyecto_id):
             'linea_trabajo': None,
         })
 
-    # Ordenar todas las actividades por fecha de inicio
     todas_actividades.sort(key=lambda x: x['fechas'][0]['fecha_inicio'] if x['fechas'] and x['fechas'][0]['fecha_inicio'] else '9999-12-31')
 
     
@@ -167,39 +154,40 @@ def actualizar_estado(request):
         actividad_id = request.POST.get('actividad_id')
         nuevo_estado = request.POST.get('nuevo_estado')
         try:
-            actividad = Actividad.objects.get(id=actividad_id)
+            actividad = ActividadBase.objects.get(id=actividad_id)
             actividad.estado = nuevo_estado
             actividad.save()
             return JsonResponse({'success': True})
-        except Actividad.DoesNotExist:
+        except ActividadBase.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Actividad no encontrada'})
-
-def actualizar_estado_actividad(request, actividad_id):
-    # Intentar primero como Actividad normal
-    actividad = Actividad.objects.filter(id=actividad_id).first()
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})        
     
-    if not actividad:
-        # Intentar como ActividadDifusion
-        actividad = get_object_or_404(ActividadDifusion, id=actividad_id)
 
-    if request.method == 'POST':
-        nuevo_estado = request.POST.get('estado')
 
-        if nuevo_estado in dict(EstadoActividad.choices):
-            actividad.estado = nuevo_estado
-            actividad.save()
+# def actualizar_estado_actividad(request, actividad_id):
+#     actividad = Actividad.objects.filter(id=actividad_id).first()
+    
+#     if not actividad:
+#         actividad = get_object_or_404(ActividadDifusion, id=actividad_id)
 
-            # Mensaje de éxito
-            messages.success(request, f"Estado de '{actividad.nombre}' actualizado correctamente.")
+#     if request.method == 'POST':
+#         nuevo_estado = request.POST.get('estado')
 
-            # Redirigir según tipo
-            if isinstance(actividad, Actividad):
-                return redirect('lista_actividades', proyecto_id=actividad.linea_trabajo.proyecto.id)
-            elif isinstance(actividad, ActividadDifusion):
-                return redirect('lista_actividades_difusion', proyecto_id=actividad.proyecto.id)
+#         if nuevo_estado in dict(EstadoActividad.choices):
+#             actividad.estado = nuevo_estado
+#             actividad.save()
 
-    # Por si entra por GET accidentalmente
-    if isinstance(actividad, Actividad):
-        return redirect('lista_actividades', proyecto_id=actividad.linea_trabajo.proyecto.id)
-    else:
-        return redirect('lista_actividades_difusion', proyecto_id=actividad.proyecto.id)
+#             messages.success(request, f"Estado de '{actividad.nombre}' actualizado correctamente.")
+
+#             if isinstance(actividad, Actividad):
+#                 return redirect('lista_actividades', proyecto_id=actividad.linea_trabajo.proyecto.id)
+#             elif isinstance(actividad, ActividadDifusion):
+#                 return redirect('lista_actividades_difusion', proyecto_id=actividad.proyecto.id)
+
+#     if isinstance(actividad, Actividad):
+#         return redirect('lista_actividades', proyecto_id=actividad.linea_trabajo.proyecto.id)
+#     else:
+#         return redirect('lista_actividades_difusion', proyecto_id=actividad.proyecto.id)
+
+# def actulizar_estado_actividad(request, actividad_id): con ActividadBase
+
