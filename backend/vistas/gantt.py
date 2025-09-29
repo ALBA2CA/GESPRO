@@ -134,7 +134,7 @@ def _calcular_posiciones_actividades(actividades, start_date, week_width):
             
             # Vista semanal: siempre ocupa semana completa donde inicia
             left_px = week_inicio * week_width
-            width_px = week_width
+            width_px = semanas_ocupadas * week_width
             
             # Vista mensual: ancho proporcional a las semanas que ocupa
             left_px_monthly = _escalar_posicion_mensual(left_px)
