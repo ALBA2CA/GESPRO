@@ -1,0 +1,110 @@
+{% extends 'base/navbar2.html' %}
+{% block title %}Lista actividades - {{ proyecto.nombre }}{% endblock %}
+
+{% block content %}
+
+<!-- Mensaje exito o error -->
+<div class="mt-3 space-y-2 w-9/10">
+    {% for message in messages %}   
+    <script>
+        setTimeout(() => {
+        const mensajes = document.querySelectorAll('.mt-3 .px-4');
+        mensajes.forEach(m => m.remove());
+        }, 10000); // desaparece después de 10s
+    </script>
+        <div class="
+            px-4 py-2 rounded-lg text-sm font-medium 
+            {% if message.tags == 'success' %}
+                bg-green-100 text-green-700 border border-green-300
+            {% elif message.tags == 'error' %}
+                bg-red-100 text-red-700 border border-red-300
+            {% elif message.tags == 'warning' %}
+                bg-yellow-100 text-yellow-800 border border-yellow-300
+            {% else %}
+                bg-gray-100 text-gray-700 border border-gray-300
+            {% endif %}
+        ">
+            {{ message }}
+        </div>
+    {% endfor %}
+</div>
+<div class="flex flex-col items-center gap-4 py-6">
+    <!-- Título -->
+
+    <div class="flex flex-row justify-between w-full px-4">
+        <h1 class="text-4xl">Actividades del proyecto</h1>
+    </div>
+
+    {% for act in actividades %}
+    <div class="relative w-9/10 p-4 bg-transparent text-black border-b border-gray-500">
+        <!-- Contenido -->
+        <div class="flex justify-between items-center">
+            <div class="text-2l font-semibold">
+                {{ act.nombre }}
+            </div>
+            <div class="estado-actividad">
+                <select 
+                    name="estado" 
+                    class="border border-gray-600 text-sm rounded p-1"
+                    data-actividad-id="{{ act.id }}">
+                    {% for value, label in estados %}
+                        <option value="{{ value }}" {% if value == act.estado_valor %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Datos adicionales debajo -->
+        <div class="mt-3 text-sm flex gap-6">
+            <p><span class="font-bold">Tipo:</span> {{ act.tipo }}</p>
+            <p><span class="font-bold">Encargados:</span> {{ act.encargados|join:", " }}</p>
+
+            {% if act.tipo == "Difusión" %}
+                <p><span class="font-bold">Línea:</span> {{ act.linea_trabajo|join:"-" }}</p>
+            {% else %} 
+                <p><span class="font-bold">Línea:</span> {{ act.linea_trabajo }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-gray-500 py-6">No hay actividades registradas.</div>
+    {% endfor %}
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll("select[name='estado']").forEach(select => {
+        let valorInicial = select.value
+
+        select.addEventListener("change", function() {
+            const actividadId = select.dataset.actividadId
+            const nuevoEstado = select.value
+
+            if (nuevoEstado === valorInicial) return
+
+            fetch("{% url 'actualizar_estado' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: `actividad_id=${actividadId}&nuevo_estado=${nuevoEstado}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    valorInicial = nuevoEstado
+                } else {
+                    select.value = valorInicial 
+                }
+            })
+            .catch(err => {
+                select.value = valorInicial
+            })
+        })
+    })
+})
+</script>
+
+{% endblock %}

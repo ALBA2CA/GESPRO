@@ -1,0 +1,11 @@
+services:
+  frontend:
+    build: .
+    ports:
+      - "3003:3003"
+    networks:
+      - red_taller_software
+
+networks:
+  red_taller_software:
+    external: true
