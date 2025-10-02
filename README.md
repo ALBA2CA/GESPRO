@@ -24,7 +24,7 @@ La forma más rápida y sencilla de poner en marcha Gespro es utilizando nuestra
 2.  **Ejecutar el Contenedor:** Inicia la aplicación en un contenedor aislado.
 
     ```bash
-    docker run -d -p 8000:8000 --name gespro-app osvaldoccn/gespro_web:latest
+    docker run -d  osvaldoccn/gespro_web:latest
     ```
 
 ---
